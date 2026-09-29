@@ -1,0 +1,245 @@
+{
+ "tool": {
+  "name": "RepoTour",
+  "version": "0.1.0",
+  "url": "https://example.com/repotour"
+ },
+ "mode": "auto",
+ "project": {
+  "name": "tiny-app",
+  "tagline": "",
+  "overview": "",
+  "repo_url": null,
+  "branch": "main"
+ },
+ "built_at": "2026-09-29 14:03 +00:00",
+ "stats": {
+  "files": 3,
+  "lines": 64,
+  "languages": {
+   "python": 3
+  }
+ },
+ "roles": [
+  {
+   "id": "conductor",
+   "emoji": "🎬",
+   "name": "Conductor",
+   "meaning": "Starts things and calls other files in order: entry points, CLIs, servers, scripts, build steps."
+  },
+  {
+   "id": "rulebook",
+   "emoji": "📐",
+   "name": "Rulebook",
+   "meaning": "Defines what things must look like: types, schemas, interfaces, base classes, constants, registries. Does little work itself."
+  },
+  {
+   "id": "worker",
+   "emoji": "⚙️",
+   "name": "Worker",
+   "meaning": "Does the actual work: the core logic, algorithms and transformations."
+  },
+  {
+   "id": "guard",
+   "emoji": "🛡️",
+   "name": "Guard",
+   "meaning": "Checks something and refuses or stops when it is wrong: validation, auth, permissions, limits."
+  },
+  {
+   "id": "storekeeper",
+   "emoji": "📦",
+   "name": "Storekeeper",
+   "meaning": "Saves and loads data: databases, caches, files, queues, migrations."
+  },
+  {
+   "id": "courier",
+   "emoji": "🔌",
+   "name": "Courier",
+   "meaning": "Talks to the outside world: HTTP clients, API adapters, SDK wrappers, messaging."
+  },
+  {
+   "id": "analyst",
+   "emoji": "🔍",
+   "name": "Analyst",
+   "meaning": "Measures and reports: metrics, logging, statistics, reports, charts."
+  },
+  {
+   "id": "face",
+   "emoji": "🖼️",
+   "name": "Face",
+   "meaning": "What a user sees: UI components, pages, views, templates, styles."
+  },
+  {
+   "id": "config",
+   "emoji": "🗂️",
+   "name": "Settings",
+   "meaning": "A file of settings or records that code reads."
+  },
+  {
+   "id": "helper",
+   "emoji": "🧩",
+   "name": "Helper",
+   "meaning": "Small shared utilities and package markers."
+  },
+  {
+   "id": "test",
+   "emoji": "🧪",
+   "name": "Test",
+   "meaning": "Automated test that checks other files still behave as before."
+  }
+ ],
+ "parts": [
+  {
+   "id": "root",
+   "name": "Root",
+   "role": "",
+   "summary": "",
+   "folders": [
+    "src/"
+   ],
+   "color": "#3b82f6",
+   "problems": [
+    "auto-root"
+   ],
+   "files": 2,
+   "lines": 50
+  },
+  {
+   "id": "tests",
+   "name": "Tests",
+   "role": "",
+   "summary": "",
+   "folders": [
+    "tests/"
+   ],
+   "color": "#10b981",
+   "problems": [
+    "auto-tests"
+   ],
+   "files": 1,
+   "lines": 14
+  }
+ ],
+ "part_links": [
+  {
+   "from": "tests",
+   "to": "root",
+   "imports": 1
+  }
+ ],
+ "problems": [
+  {
+   "id": "auto-root",
+   "part": "root",
+   "title": "Files in src",
+   "without": "",
+   "fix": "",
+   "files": [
+    "src/main.py",
+    "src/util.py"
+   ],
+   "tests": [],
+   "placeholder": true
+  },
+  {
+   "id": "auto-tests",
+   "part": "tests",
+   "title": "Files in tests",
+   "without": "",
+   "fix": "",
+   "files": [],
+   "tests": [
+    "tests/test_util.py"
+   ],
+   "placeholder": true
+  }
+ ],
+ "stories": [],
+ "guide": [],
+ "files": {
+  "src/main.py": {
+   "lang": "python",
+   "lines": 30,
+   "purpose": "Entry point.",
+   "role": "conductor",
+   "problem": "auto-root",
+   "part": "root",
+   "stories": [],
+   "imports": [
+    {
+     "file": "src/util.py",
+     "names": [
+      "slug"
+     ]
+    }
+   ],
+   "libs": [
+    "argparse"
+   ],
+   "used_by": [],
+   "outline": {
+    "items": [
+     {
+      "name": "main",
+      "kind": "function",
+      "line": 5,
+      "signature": "main()",
+      "note": "",
+      "exported": true
+     }
+    ],
+    "consts": []
+   }
+  },
+  "src/util.py": {
+   "lang": "python",
+   "lines": 20,
+   "purpose": "",
+   "role": "helper",
+   "problem": "auto-root",
+   "part": "root",
+   "stories": [],
+   "imports": [],
+   "libs": [],
+   "used_by": [
+    "src/main.py",
+    "tests/test_util.py"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "slug",
+      "kind": "function",
+      "line": 3,
+      "signature": "slug(text)",
+      "note": "",
+      "exported": true
+     }
+    ],
+    "consts": []
+   }
+  },
+  "tests/test_util.py": {
+   "lang": "python",
+   "lines": 14,
+   "purpose": "",
+   "role": "test",
+   "problem": "auto-tests",
+   "part": "tests",
+   "stories": [],
+   "imports": [
+    {
+     "file": "src/util.py",
+     "names": [
+      "slug"
+     ]
+    }
+   ],
+   "libs": [
+    "pytest"
+   ],
+   "used_by": []
+  }
+ },
+ "warnings": []
+}

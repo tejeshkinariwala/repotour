@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RepoTour</title>
+<style>
+:root{
+  --bg:#f6f6f3; --surface:#ffffff; --surface2:#f0f0ec; --text:#1c2230; --muted:#59616f; --border:#dcdcd5;
+  --accent:#2350c8; --accent-bg:#e8eefc; --warn:#8a5300; --warn-bg:#fff3d6; --warn-border:#e8c777;
+  --shadow:0 1px 2px rgba(20,25,40,.06),0 2px 8px rgba(20,25,40,.04);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+:root[data-theme=dark]{
+  --bg:#13161c; --surface:#1b1f27; --surface2:#242933; --text:#e6e9ef; --muted:#a3abb8; --border:#2f3541;
+  --accent:#86aaff; --accent-bg:#232f4d; --warn:#f3c56b; --warn-bg:#3a2e14; --warn-border:#6b5320;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{scroll-padding-top:76px}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:4px}
+code,.mono{font-family:var(--mono);font-size:.88em}
+h1{font-size:2rem;line-height:1.2;margin:0 0 .4rem;letter-spacing:-.01em}
+h2{font-size:1.3rem;margin:2.4rem 0 .8rem;letter-spacing:-.005em}
+h3{font-size:1.05rem;margin:0 0 .4rem}
+p{margin:.6rem 0}
+.prose{max-width:70ch}
+.muted{color:var(--muted)}
+.small{font-size:.86rem}
+.skip{position:absolute;left:-999px}
+.skip:focus{left:8px;top:8px;background:var(--surface);padding:6px 10px;z-index:100}
+
+/* header */
+header.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border)}
+.top-in{max-width:1120px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:1.05rem;color:var(--text);white-space:nowrap}
+.brand:hover{text-decoration:none}
+nav.main{display:flex;gap:2px;flex-wrap:wrap}
+nav.main a{color:var(--muted);padding:6px 10px;border-radius:6px;font-size:.94rem}
+nav.main a:hover{background:var(--surface2);text-decoration:none;color:var(--text)}
+nav.main a[aria-current=page]{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.spacer{flex:1}
+.searchbox{position:relative;min-width:200px;flex:0 1 300px}
+.searchbox input{width:100%;padding:7px 34px 7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font:inherit;font-size:.92rem}
+.searchbox kbd{position:absolute;right:9px;top:50%;transform:translateY(-50%);font:.75rem var(--mono);color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:0 5px;pointer-events:none}
+.dropdown{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);max-height:70vh;overflow:auto;z-index:30;min-width:340px}
+.dropdown[hidden]{display:none}
+.dd-h{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px 12px 2px}
+.dd-i{display:block;padding:6px 12px;color:var(--text);font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd-i:hover,.dd-i.sel{background:var(--accent-bg);text-decoration:none}
+.dd-i .muted{margin-left:6px;font-size:.82rem}
+.iconbtn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 10px;font:inherit;font-size:.9rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.iconbtn:hover{background:var(--surface2)}
+.badge{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-border);border-radius:999px;font-size:.75rem;font-weight:700;padding:0 7px;line-height:1.4}
+
+main{max-width:1120px;margin:0 auto;padding:28px 20px 60px;outline:none;min-height:70vh}
+footer{max-width:1120px;margin:0 auto;padding:18px 20px 40px;color:var(--muted);font-size:.86rem;border-top:1px solid var(--border)}
+
+.tagline{font-size:1.15rem;color:var(--muted);margin:0 0 1rem;max-width:60ch}
+.crumbs{font-size:.88rem;color:var(--muted);margin-bottom:.8rem}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:1.1rem 0}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 14px;box-shadow:var(--shadow)}
+.stat b{font-size:1.25rem;display:block;line-height:1.2}
+.stat span{font-size:.8rem;color:var(--muted)}
+.banner{background:var(--accent-bg);border:1px solid var(--accent);border-radius:10px;padding:12px 16px;margin:1rem 0;max-width:80ch}
+.banner code{background:var(--surface);padding:1px 6px;border-radius:4px}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow)}
+.pcard{border-top:5px solid var(--pc,var(--accent));display:block;color:var(--text)}
+a.pcard:hover{text-decoration:none;border-color:var(--pc,var(--accent));transform:translateY(-1px)}
+.pcard h3{margin:0 0 2px;font-size:1.1rem}
+.pcard .role{color:var(--muted);font-size:.9rem;margin-bottom:8px}
+.pcard .nums{font-size:.82rem;color:var(--muted)}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--pc,var(--accent));margin-right:6px}
+.map{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px;box-shadow:var(--shadow);margin-bottom:14px}
+.map svg{width:100%;height:auto;display:block;max-height:440px}
+.map .node rect{fill:var(--pc);fill-opacity:.16;stroke:var(--pc);stroke-width:2}
+.map .node:hover rect{fill-opacity:.3}
+.map .node text{fill:var(--text);font:600 14px var(--sans)}
+.map .node text.sub{font:12px var(--sans);fill:var(--muted)}
+.map .edge{fill:none;stroke:var(--muted);opacity:.75}
+.map .elabel{font:600 11px var(--sans);fill:var(--text);paint-order:stroke;stroke:var(--surface);stroke-width:4px}
+.deps{margin:.4rem 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:2px 18px;font-size:.92rem}
+.deps li{padding:2px 0}
+.arrow{color:var(--muted);margin:0 4px}
+
+.legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:10px}
+.role-item{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.role-item .em{font-size:1.4rem;line-height:1.3}
+.role-item small{display:block;color:var(--muted);line-height:1.4}
+
+.act{margin:1.2rem 0 .3rem;font-size:.8rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.storylist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.storylist a.story{display:block;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text)}
+.storylist a.story:hover{border-color:var(--accent);text-decoration:none}
+.storylist .t{font-weight:600}
+ol.guide{padding-left:1.4rem;max-width:70ch}
+ol.guide li{margin:.5rem 0;padding-left:.3rem}
+
+/* file rows */
+.rows{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.row{display:grid;grid-template-columns:1.7rem minmax(0,1.3fr) minmax(0,2fr) 5.6rem;gap:2px 10px;align-items:baseline;padding:7px 12px;border-top:1px solid var(--border);color:var(--text)}
+.row:first-child{border-top:0}
+.row:hover{background:var(--accent-bg);text-decoration:none}
+.row .em{text-align:center}
+.row .path{font-family:var(--mono);font-size:.84rem;word-break:break-all;color:var(--accent)}
+.row .path .dir{color:var(--muted)}
+.row .purpose{font-size:.9rem;color:var(--muted)}
+.row .lines{text-align:right;font-size:.78rem;color:var(--muted);font-family:var(--mono);white-space:nowrap}
+.row .hit{grid-column:2/-1;font-size:.8rem;color:var(--muted)}
+.more{display:block;width:100%;background:var(--surface2);border:0;border-top:1px solid var(--border);padding:8px;color:var(--accent);cursor:pointer;font:inherit;font-size:.9rem}
+.tagbtn{display:inline-block;font-size:.72rem;background:var(--surface2);color:var(--muted);border-radius:4px;padding:0 6px;margin-left:6px;vertical-align:middle;font-weight:600}
+
+/* part & problems */
+.phead{border-left:8px solid var(--pc,var(--accent));padding-left:16px;margin-bottom:1rem}
+.problem{margin:16px 0}
+.pid{font:700 .78rem var(--mono);background:var(--pc-bg,var(--surface2));color:var(--text);border:1px solid var(--pc,var(--border));border-radius:5px;padding:1px 7px;margin-right:8px;vertical-align:middle}
+.problem .lbl{font-size:.74rem;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:var(--muted);margin-top:.9rem;display:block}
+.problem .rows,.step .rows{margin-top:10px}
+.sub-h{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin:14px 0 6px}
+.placeholder-note{font-size:.88rem;color:var(--muted);font-style:italic}
+
+/* story */
+.cmd{display:flex;align-items:stretch;gap:0;margin:1rem 0;max-width:min(80ch,100%)}
+.cmd code{flex:1;min-width:0;background:#161a22;color:#e6e9ef;padding:10px 14px;border-radius:8px 0 0 8px;overflow-x:auto;white-space:pre;font-size:.9rem}
+.cmd button{border:1px solid var(--border);border-left:0;background:var(--surface);color:var(--text);padding:0 14px;border-radius:0 8px 8px 0;cursor:pointer;font:inherit;font-size:.88rem}
+.cmd button:hover{background:var(--surface2)}
+ol.steps{list-style:none;padding:0;margin:1rem 0;counter-reset:s}
+.step{display:grid;grid-template-columns:2.2rem minmax(0,1fr);gap:12px;margin:18px 0}
+.step .n{width:2rem;height:2rem;border-radius:50%;background:var(--accent);color:var(--surface);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:.9rem}
+:root[data-theme=dark] .step .n{color:#0d1220}
+.step p{margin:.2rem 0 0}
+.pn{display:flex;justify-content:space-between;gap:14px;margin-top:2.4rem;flex-wrap:wrap}
+.pn>span{flex:0 1 48%}
+.pn a{display:block;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text)}
+.pn a small{display:block;color:var(--muted)}
+.pn a:hover{border-color:var(--accent);text-decoration:none}
+
+/* all files */
+.filters{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin:1rem 0;box-shadow:var(--shadow)}
+.filters input[type=search]{width:100%;max-width:520px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
+.chiprow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.chiprow .k{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;width:4.6rem}
+.chip{border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:999px;padding:2px 11px;font:inherit;font-size:.84rem;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+:root[data-theme=dark] .chip[aria-pressed=true]{color:#0d1220}
+.chip .c{opacity:.7;font-size:.78rem;margin-left:3px}
+details.folder{margin:2px 0}
+details.folder>summary{cursor:pointer;padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:.86rem;list-style:none;display:flex;gap:8px;align-items:baseline}
+details.folder>summary::-webkit-details-marker{display:none}
+details.folder>summary::before{content:"\25B8";color:var(--muted);display:inline-block;width:.9em;transition:transform .12s}
+details.folder[open]>summary::before{transform:rotate(90deg)}
+details.folder>summary:hover{background:var(--surface2)}
+details.folder>summary .cnt{color:var(--muted);font-size:.78rem;font-family:var(--sans)}
+details.folder>.inner{margin-left:14px;padding-left:12px;border-left:1px solid var(--border)}
+.tree{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px}
+.tree .rows{border:0;border-radius:6px}
+.tree-files{margin:2px 0 6px}
+
+/* file view */
+.fhead{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline}
+.fpath{font:600 1.2rem var(--mono);word-break:break-all;margin:0}
+.pill{display:inline-flex;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:2px 12px;font-size:.88rem;color:var(--text)}
+a.pill:hover{border-color:var(--accent);text-decoration:none}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin:.8rem 0}
+.purpose-big{font-size:1.1rem;max-width:70ch;margin:1rem 0}
+.outline,.outline ul{list-style:none;margin:0;padding:0}
+.outline{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 14px}
+.outline ul{margin-left:1.2rem;padding-left:.9rem;border-left:2px solid var(--border)}
+.item{padding:8px 6px;border-radius:8px;transition:background .3s}
+.item+.item{border-top:1px dashed var(--border)}
+.outline ul .item{border-top:0}
+.item.flash{background:var(--accent-bg);box-shadow:0 0 0 2px var(--accent)}
+.irow{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.kind{display:inline-flex;align-items:center;justify-content:center;min-width:1.5rem;height:1.5rem;border-radius:6px;font:700 .78rem var(--mono);color:#fff;flex:none;align-self:center}
+.k-class{background:#7c3aed}.k-function{background:#2563eb}.k-method{background:#0e7490}.k-table{background:#b45309}.k-type{background:#be185d}.k-const{background:#4b5563}.k-value{background:#0f766e}.k-other{background:#4b5563}
+.nm{font-weight:700;font-family:var(--mono);font-size:.95rem}
+.sig{font-family:var(--mono);font-size:.83rem;color:var(--muted);word-break:break-word}
+.ln{font:.78rem var(--mono);color:var(--muted);margin-left:auto}
+.ln a{color:var(--accent)}
+.prose code,.note code,.tagline code,.purpose code,.purpose-big code,.role code,.small code,.problem code,.role-item code,.hit code,.warnlist code,.story code,.pcard code,.step code,.guide code{background:var(--surface2);font-family:var(--mono);font-size:.88em;border-radius:4px;padding:0 3px}
+.note{margin:2px 0 0 2.15rem;font-size:.94rem;max-width:72ch}
+.note.none{color:var(--muted);font-style:italic;font-size:.82rem;opacity:.85}
+.calls{margin:3px 0 0 2.15rem;font-size:.84rem;color:var(--muted)}
+.calls a{font-family:var(--mono);cursor:pointer;margin-right:6px}
+.priv{font-size:.7rem;color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:0 5px}
+ul.methods{margin:4px 0 0 2.15rem !important;border-left:2px solid var(--border);padding-left:.9rem !important}
+.consts{display:flex;flex-wrap:wrap;gap:6px}
+.consts code,.names code,.libs code{background:var(--surface2);border-radius:5px;padding:1px 7px}
+.imp{display:grid;gap:8px}
+.imp-i{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px}
+.names{margin-top:4px;display:flex;flex-wrap:wrap;gap:5px;font-size:.84rem}
+.libs{display:flex;flex-wrap:wrap;gap:6px}
+.empty{color:var(--muted);font-style:italic}
+.warnlist{list-style:none;padding:0;margin:1rem 0;display:grid;gap:8px;max-width:90ch}
+.warnlist li{background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:10px;padding:8px 14px;word-break:break-word}
+.warnlist a{font-family:var(--mono);font-size:.9em;text-decoration:underline}
+.miss{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-border);border-radius:5px;font-size:.74rem;padding:0 7px;font-weight:600}
+
+@media (max-width:820px){
+  main{padding:20px 14px 50px}
+  .row{grid-template-columns:1.7rem minmax(0,1fr) 5.6rem}
+  .row .purpose{grid-column:2/-1;grid-row:2}
+  .row .lines{grid-row:1;grid-column:3}
+  .searchbox{order:5;flex:1 1 100%}
+  .spacer{display:none}
+  .map svg{max-height:340px}
+  .pn>span{flex:1 1 100%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="top-in">
+    <a class="brand" id="brand" href="#/">RepoTour</a>
+    <nav class="main" aria-label="Main">
+      <a href="#/" data-nav="home">Home</a>
+      <a href="#/stories" data-nav="stories">Stories</a>
+      <a href="#/parts" data-nav="parts">Parts</a>
+      <a href="#/files" data-nav="files">All files</a>
+    </nav>
+    <span class="spacer"></span>
+    <div class="searchbox" role="search">
+      <input id="gsearch" type="search" placeholder="Search files, functions, notes" aria-label="Search" autocomplete="off">
+      <kbd aria-hidden="true">/</kbd>
+      <div class="dropdown" id="dd" hidden></div>
+    </div>
+    <a class="iconbtn" id="warnbtn" href="#/warnings" hidden aria-label="Warnings">Warnings <span class="badge" id="warncount">0</span></a>
+    <button class="iconbtn" id="theme" type="button" aria-label="Toggle light and dark theme">Theme</button>
+  </div>
+</header>
+<main id="main" tabindex="-1"></main>
+<footer id="foot"></footer>
+
+<script>
+"use strict";
+const DATA = {"tool": {"name": "RepoTour", "version": "0.1.0", "url": "https://github.com/tejeshkinariwala/repotour"}, "mode": "written", "project": {"name": "Zustand", "tagline": "A small state-management library for React, built on a framework-free store with optional middleware.", "overview": "Zustand keeps application state in a store object that lives outside React. A store holds one state value, lets you read it, replace or merge into it, and subscribe to changes. `src/vanilla.ts` implements that store and does not import React.\n\n`src/react.ts` wraps a store in a hook built on `useSyncExternalStore`, so components re-render when the slice of state they select changes. Middleware in `src/middleware/` are functions that wrap the function you pass to `create`, to add persistence, Redux DevTools, Immer-style updates and similar features.\n\nThe repo also holds the Rollup build that publishes several entry points (`zustand`, `zustand/vanilla`, `zustand/middleware`, `zustand/shallow`, `zustand/traditional`, `zustand/middleware/immer`) and a Vitest suite in `tests/`. The `docs/` site and `examples/` apps are excluded from this tour.", "repo_url": "https://github.com/pmndrs/zustand", "branch": "main"}, "built_at": "2026-09-29 12:54 +08:00", "stats": {"files": 37, "lines": 9520, "languages": {"typescript": 32, "javascript": 2, "json": 2, "yaml": 1}}, "roles": [{"id": "conductor", "emoji": "🎬", "name": "Conductor", "meaning": "Starts things and calls other files in order: entry points, CLIs, servers, scripts, build steps."}, {"id": "rulebook", "emoji": "📐", "name": "Rulebook", "meaning": "Defines what things must look like: types, schemas, interfaces, base classes, constants, registries. Does little work itself."}, {"id": "worker", "emoji": "⚙️", "name": "Worker", "meaning": "Does the actual work: the core logic, algorithms and transformations."}, {"id": "guard", "emoji": "🛡️", "name": "Guard", "meaning": "Checks something and refuses or stops when it is wrong: validation, auth, permissions, limits."}, {"id": "storekeeper", "emoji": "📦", "name": "Storekeeper", "meaning": "Saves and loads data: databases, caches, files, queues, migrations."}, {"id": "courier", "emoji": "🔌", "name": "Courier", "meaning": "Talks to the outside world: HTTP clients, API adapters, SDK wrappers, messaging."}, {"id": "analyst", "emoji": "🔍", "name": "Analyst", "meaning": "Measures and reports: metrics, logging, statistics, reports, charts."}, {"id": "face", "emoji": "🖼️", "name": "Face", "meaning": "What a user sees: UI components, pages, views, templates, styles."}, {"id": "config", "emoji": "🗂️", "name": "Settings", "meaning": "A file of settings or records that code reads."}, {"id": "helper", "emoji": "🧩", "name": "Helper", "meaning": "Small shared utilities and package markers."}, {"id": "test", "emoji": "🧪", "name": "Test", "meaning": "Automated test that checks other files still behave as before."}], "parts": [{"id": "core", "name": "Store core", "role": "Holds the state, applies updates and notifies subscribers, without any React code.", "summary": "`createStore` in `src/vanilla.ts` builds a store with `setState`, `getState`, `getInitialState` and `subscribe`. The same file defines the shared TypeScript types, including the `StoreMutators` interface that middleware extend. `src/index.ts` is the package entry: it re-exports the core, the React hook and every middleware except Immer.", "folders": ["src/vanilla.ts/", "src/index.ts/"], "color": "#2563eb", "problems": ["C1", "C2"], "files": 5, "lines": 635}, {"id": "react", "name": "React bindings", "role": "Connects a store to components and avoids re-renders when the selected value did not change.", "summary": "`create` in `src/react.ts` builds a store and returns a hook that reads it through `React.useSyncExternalStore`. `src/traditional.ts` offers the same API on the `use-sync-external-store` shim, with an optional equality function. The shallow files compare selector results by their top-level entries.", "folders": ["src/react.ts/", "src/react/", "src/vanilla/", "src/shallow.ts/", "src/traditional.ts/"], "color": "#16a34a", "problems": ["R1", "R2", "R3"], "files": 9, "lines": 1523}, {"id": "middleware", "name": "Middleware", "role": "Wraps a store initializer to add persistence, DevTools, Immer updates and other behaviour.", "summary": "Each middleware takes a state initializer (a function `(set, get, api) => state`) and returns another one. Most replace or wrap `api.setState` or `api.subscribe` before calling the inner initializer. Each file also adds an entry to `StoreMutators` in `src/vanilla.ts` through `declare module`, so TypeScript knows which methods the store gained. `src/middleware.ts` re-exports all middleware except `immer`, which is imported from `zustand/middleware/immer`.", "folders": ["src/middleware/", "src/middleware.ts/"], "color": "#d97706", "problems": ["M1", "M2", "M3", "M4", "M5", "M6", "M7"], "files": 14, "lines": 6867}, {"id": "build", "name": "Build and tooling", "role": "Compiles the source into the published package and configures tests, types and linting.", "summary": "`rollup.config.mjs` builds one CommonJS file and one ESM file per entry point, chosen by a `--config-\u003centry>` flag that the scripts in `package.json` pass. `vitest.config.mts` and `tsconfig.json` map `zustand` imports to `src/` so tests run against source. ESLint and TypeScript settings live in the other root config files.", "folders": ["./", "tests/"], "color": "#7c3aed", "problems": ["B1", "B2", "B3"], "files": 9, "lines": 495}], "part_links": [{"from": "core", "to": "react", "imports": 1}, {"from": "core", "to": "middleware", "imports": 2}, {"from": "react", "to": "core", "imports": 5}, {"from": "middleware", "to": "core", "imports": 16}, {"from": "middleware", "to": "build", "imports": 2}], "problems": [{"id": "C1", "part": "core", "title": "State has to live outside React and still notify whoever depends on it", "without": "Each app would hand-write its own state holder, listener set and merge logic, and code outside React (timers, sockets, tests) could not read or change state.", "fix": "`createStore` in `src/vanilla.ts` keeps `state` and a `Set` of listeners in a closure. `setState` computes the next state, skips the update when it is identical to the current one, merges or replaces it, then calls every listener with the new and previous state.", "files": ["src/vanilla.ts"], "tests": ["tests/vanilla/basic.test.ts", "tests/vanilla/subscribe.test.tsx"], "placeholder": false}, {"id": "C2", "part": "core", "title": "Users need one import path for the store, the hook and the middleware", "without": "Users would import from several internal files and could not rely on the file layout staying the same.", "fix": "`src/index.ts` re-exports `src/vanilla.ts` and `src/react.ts`, and re-exports `redux`, `devtools`, `subscribeWithSelector`, `combine`, `persist`, `createJSONStorage` and `ssrSafe` (as `unstable_ssrSafe`) from the middleware files. `immer` is not re-exported here.", "files": ["src/index.ts"], "tests": ["tests/types.test.tsx"], "placeholder": false}, {"id": "R1", "part": "react", "title": "A component must read store state and re-render when its slice changes", "without": "Components would need their own subscription and force-update code, and could tear (show different state in one render) under concurrent rendering.", "fix": "`useStore` in `src/react.ts` calls `React.useSyncExternalStore` with `api.subscribe` and a snapshot function that applies the selector. `create` calls `createStore` and returns a hook with the store methods copied onto it; called with no argument it returns the curried form `create\u003cT>()(initializer)`. The server snapshot uses `api.getInitialState`.", "files": ["src/react.ts"], "tests": ["tests/basic.test.tsx", "tests/ssr.test.tsx"], "placeholder": false}, {"id": "R2", "part": "react", "title": "A selector that returns a new object or array re-renders on every update", "without": "A selector like `(s) => ({ a: s.a, b: s.b })` returns a new object each call, so `useSyncExternalStore` sees a change every time and the component re-renders on every store update.", "fix": "`shallow` in `src/vanilla/shallow.ts` compares two values by their top-level entries. `useShallow` in `src/react/shallow.ts` wraps a selector and returns the previous result when `shallow` says the new one is equal. `src/shallow.ts` exports both from `zustand/shallow`.", "files": ["src/vanilla/shallow.ts", "src/react/shallow.ts", "src/shallow.ts"], "tests": ["tests/shallow.test.tsx", "tests/vanilla/shallow.test.tsx"], "placeholder": false}, {"id": "R3", "part": "react", "title": "Some apps need a custom equality check, or a React version without useSyncExternalStore", "without": "Apps on the older API would not be able to pass an equality function to a hook, and could not use Zustand hooks that take one.", "fix": "`src/traditional.ts` provides `createWithEqualityFn` and `useStoreWithEqualityFn`. They use `useSyncExternalStoreWithSelector` from the `use-sync-external-store` shim and accept an equality function per hook call or as a default for the store.", "files": ["src/traditional.ts"], "tests": [], "placeholder": false}, {"id": "M1", "part": "middleware", "title": "State is lost on page reload", "without": "Every visit would start from the initial state, and each app would write its own load, save, version and migration code.", "fix": "`persist` in `src/middleware/persist.ts` saves the state to a storage after every `set` and loads it when the store is created. `createJSONStorage` turns a string storage such as `localStorage` into a JSON storage. On load it checks the stored version, calls `migrate` when versions differ, and merges the stored state into the current one. It handles sync and async storages through `toThenable`. It also adds `api.persist` with `rehydrate`, `hasHydrated`, `onHydrate`, `onFinishHydration`, `setOptions`, `getOptions` and `clearStorage`.", "files": ["src/middleware/persist.ts"], "tests": ["tests/persistSync.test.tsx", "tests/persistAsync.test.tsx"], "placeholder": false}, {"id": "M2", "part": "middleware", "title": "State changes are hard to inspect while debugging", "without": "Developers would have no action log, no time travel, and no way to set state from the browser while debugging.", "fix": "`devtools` in `src/middleware/devtools.ts` connects to the Redux DevTools browser extension when it exists and `enabled` allows it. It replaces `api.setState` so each update sends an action and the new state to the extension, and it applies DevTools messages such as `JUMP_TO_STATE` back to the store. The `store` option lets several stores share one connection, and `api.devtools.cleanup` closes the subscription.", "files": ["src/middleware/devtools.ts"], "tests": ["tests/devtools.test.tsx"], "placeholder": false}, {"id": "M3", "part": "middleware", "title": "Updating deeply nested state needs verbose spread code", "without": "Each nested update would need a hand-written chain of object spreads.", "fix": "`immer` in `src/middleware/immer.ts` replaces `store.setState` so that when it is given a function, the function is wrapped with Immer's `produce` and can mutate a draft. Non-function values pass through unchanged.", "files": ["src/middleware/immer.ts"], "tests": ["tests/immer.test.tsx"], "placeholder": false}, {"id": "M4", "part": "middleware", "title": "A listener should run only when one slice of state changes", "without": "Plain `subscribe` calls the listener on every state change, so each listener would have to compare old and new slices itself.", "fix": "`subscribeWithSelector` in `src/middleware/subscribeWithSelector.ts` replaces `api.subscribe` with a version that accepts a selector, a listener and options (`equalityFn`, `fireImmediately`). The listener runs only when the selected slice differs.", "files": ["src/middleware/subscribeWithSelector.ts"], "tests": ["tests/subscribe.test.tsx"], "placeholder": false}, {"id": "M5", "part": "middleware", "title": "There are other common ways to define store state", "without": "Users who prefer a Redux-style reducer, or want state and actions typed separately, would have to write that wiring themselves.", "fix": "`redux` in `src/middleware/redux.ts` builds a store from a reducer and initial state and adds a `dispatch` function. `combine` in `src/middleware/combine.ts` merges an initial state object with the result of a creator function, which lets TypeScript infer the state type.", "files": ["src/middleware/redux.ts", "src/middleware/combine.ts"], "tests": [], "placeholder": false}, {"id": "M6", "part": "middleware", "title": "A store shared between server and client can be updated during server rendering", "without": "State set during server rendering would be lost or leak between requests, and nothing would report the mistake.", "fix": "`ssrSafe` in `src/middleware/ssrSafe.ts` checks `isSSR` (true when `window` is undefined). When true, it replaces `set` and `api.setState` with a function that throws. It is exported as `unstable_ssrSafe` and its source comments say it is experimental.", "files": ["src/middleware/ssrSafe.ts"], "tests": [], "placeholder": false}, {"id": "M7", "part": "middleware", "title": "Users need one import path for the middleware, and their types must compose", "without": "Users would import from each middleware file, and nothing would check that stacked middleware keep their types.", "fix": "`src/middleware.ts` re-exports the middleware files except `immer`. Type composition is checked by `tests/middlewareTypes.test.tsx`.", "files": ["src/middleware.ts"], "tests": ["tests/middlewareTypes.test.tsx"], "placeholder": false}, {"id": "B1", "part": "build", "title": "One source tree must ship as CommonJS, ESM and type declarations for several entry points", "without": "Consumers on different module systems and bundlers could not import the package, and each entry point would need a hand-written build.", "fix": "`rollup.config.mjs` returns a CommonJS config and an ESM config for the entry named by a `--config-\u003cname>` flag, plus a declarations config for the main entry. `package.json` scripts run it once per entry, then patch type declarations and copy files into `dist`. The `exports` map in `package.json` exposes each entry.", "files": ["package.json", "rollup.config.mjs", "pnpm-workspace.yaml"], "tests": [], "placeholder": false}, {"id": "B2", "part": "build", "title": "Source files need type checking, linting and shared type declarations", "without": "Type errors and style problems would reach the published package, and `import.meta.env` would not type check.", "fix": "`tsconfig.json` sets compiler options and maps `zustand` imports to `src/`. `eslint.config.mjs` sets lint rules. `src/types.d.ts` declares `ImportMeta.env` with a `MODE` field, which `devtools.ts` reads.", "files": ["tsconfig.json", "eslint.config.mjs", "src/types.d.ts"], "tests": [], "placeholder": false}, {"id": "B3", "part": "build", "title": "Tests must run against the source, not a built package", "without": "Tests would need a build first, and `import from 'zustand'` would resolve to an installed copy.", "fix": "`vitest.config.mts` aliases `zustand` and `zustand/*` to files in `src/`, runs tests in jsdom and loads `tests/setup.ts`. `tests/test-utils.ts` holds JSON helpers for Map values and a `sleep` function used by the persist tests.", "files": ["vitest.config.mts", "tests/setup.ts", "tests/test-utils.ts"], "tests": [], "placeholder": false}], "stories": [{"id": "S1", "act": "Act 1: Use a store", "title": "A component reads and updates a counter", "command": "const useBear = create((set) => ({ bears: 0, add: () => set((s) => ({ bears: s.bears + 1 })) }))", "summary": "`create` builds a store and a hook. A component calls the hook with a selector, and calling `add` updates the store and re-renders subscribers whose selected value changed.", "steps": [{"text": "The user imports `create` from `zustand`. `src/index.ts` re-exports it from `src/react.ts`.", "files": ["src/index.ts", "src/react.ts"]}, {"text": "`create` calls `createImpl`, which calls `createStore(createState)`. `createStoreImpl` builds `setState`, `getState`, `getInitialState` and `subscribe`, then calls `createState(setState, getState, api)` and keeps the result as both the state and the initial state.", "files": ["src/react.ts", "src/vanilla.ts"]}, {"text": "`createImpl` defines `useBoundStore`, which calls `useStore(api, selector)`, and copies the store methods onto it with `Object.assign`. `create` returns it.", "files": ["src/react.ts"]}, {"text": "A component calls `useBear((s) => s.bears)`. `useStore` calls `React.useSyncExternalStore(api.subscribe, () => selector(api.getState()), () => selector(api.getInitialState()))`.", "files": ["src/react.ts"]}, {"text": "A click handler calls `add`, which calls `set`. `setState` calls the updater, returns early if the result is identical (`Object.is`) to the current state, otherwise merges it with `Object.assign({}, state, nextState)` and calls every listener with the new and previous state.", "files": ["src/vanilla.ts"]}, {"text": "React calls the snapshot function again. If the selected value differs from the last one, the component re-renders.", "files": ["src/react.ts"]}]}, {"id": "S2", "act": "Act 1: Use a store", "title": "Code outside React uses a store", "command": "import { createStore } from 'zustand/vanilla'", "summary": "`createStore` alone gives a working store with no React import. Callers read state, subscribe and update it directly.", "steps": [{"text": "`createStore(initializer)` returns the store `api`. Called with no argument it returns `createStoreImpl`, so the curried form `createStore\u003cT>()(initializer)` works.", "files": ["src/vanilla.ts"]}, {"text": "`api.subscribe(listener)` adds the listener to a `Set` and returns a function that deletes it.", "files": ["src/vanilla.ts"]}, {"text": "`api.setState(partial, replace)` notifies listeners only when the next state is not identical to the current one. With `replace` true, or when the next state is not an object, the state is replaced rather than merged.", "files": ["src/vanilla.ts"]}, {"text": "`api.getInitialState()` returns the value from when the store was created, and `api.getState()` returns the current one. The tests in `tests/vanilla/basic.test.ts` check these cases.", "files": ["src/vanilla.ts", "tests/vanilla/basic.test.ts"]}]}, {"id": "S3", "act": "Act 1: Use a store", "title": "A selector returns a new object and the component re-renders too often", "command": "const { a, b } = useStore(useShallow((s) => ({ a: s.a, b: s.b })))", "summary": "`useShallow` keeps the previous selector result when the new one has equal top-level entries.", "steps": [{"text": "`useShallow(selector)` returns a function that runs the selector and stores the last result in a `useRef`.", "files": ["src/react/shallow.ts"]}, {"text": "It calls `shallow(prev.current, next)`. `shallow` returns true for identical values, and false for non-objects or objects with different prototypes.", "files": ["src/react/shallow.ts", "src/vanilla/shallow.ts"]}, {"text": "For iterables with `entries` (Map, Set, arrays) it compares entries, for other iterables it compares values in order, and for plain objects it compares `Object.entries`. Values are compared with `Object.is`.", "files": ["src/vanilla/shallow.ts"]}, {"text": "When equal, `useShallow` returns the previous object, so `useSyncExternalStore` sees the same snapshot and skips the re-render.", "files": ["src/react/shallow.ts", "src/react.ts"]}]}, {"id": "S4", "act": "Act 2: Add behaviour with middleware", "title": "State survives a page reload", "command": "create(persist((set) => ({ count: 0 }), { name: 'counter' }))", "summary": "`persist` saves state after each update and restores it when the store is created.", "steps": [{"text": "`create` calls `persist(config, options)`, which returns an initializer. `persistImpl` builds `options`, using `createJSONStorage(() => window.localStorage)` as the default storage, an identity `partialize`, version 0 and a shallow `merge`.", "files": ["src/middleware/persist.ts"]}, {"text": "If `createJSONStorage` could not get a storage (for example `localStorage` is not defined) the initializer returns `config(...)` with a `set` that logs a warning and still updates the state.", "files": ["src/middleware/persist.ts"]}, {"text": "Otherwise `api.setState` and the `set` given to `config` are wrapped so each update also calls `setItem`, which writes `{ state: partialize(state), version }` under `options.name`.", "files": ["src/middleware/persist.ts"]}, {"text": "Unless `skipHydration` is set, `hydrate` runs. It calls `getItem` through `toThenable`, so sync and async storages share one code path. If the stored version differs from `options.version`, it calls `migrate`, or logs an error when there is none.", "files": ["src/middleware/persist.ts"]}, {"text": "The stored state is merged with the current state by `options.merge` and applied with `set(state, true)`. Hydration listeners and `onRehydrateStorage` callbacks run, and a counter (`hydrationVersion`) makes older in-flight hydrations stop when a newer one starts.", "files": ["src/middleware/persist.ts", "src/vanilla.ts"]}, {"text": "The initializer returns `stateFromStorage || configResult`, so with a sync storage the first state already holds the stored values.", "files": ["src/middleware/persist.ts"]}, {"text": "`api.persist` is set before hydration starts. `rehydrate` runs `hydrate` again, `setOptions` merges new options (and switches storage if one is given), `clearStorage` removes the stored item and stops any in-flight hydration, and `onHydrate` and `onFinishHydration` register listeners and return a function that removes them.", "files": ["src/middleware/persist.ts"]}]}, {"id": "S5", "act": "Act 2: Add behaviour with middleware", "title": "A developer inspects a store in Redux DevTools", "command": "create(devtools((set) => ({ count: 0 }), { name: 'counter' }))", "summary": "`devtools` sends each update to the browser extension and applies commands from it.", "steps": [{"text": "`devtoolsImpl` reads `enabled`, `anonymousActionType` and `store` from the options. It looks for `window.__REDUX_DEVTOOLS_EXTENSION__` when `enabled` is true or, if unset, `import.meta.env?.MODE` is not `production`. Without the extension it returns `fn(set, get, api)` unchanged.", "files": ["src/middleware/devtools.ts", "src/types.d.ts"]}, {"text": "`extractConnectionInformation` connects to the extension. With a `store` option, stores with the same `name` share one connection kept in `trackedConnections`.", "files": ["src/middleware/devtools.ts"]}, {"text": "`api.setState` is replaced. It calls the original `set`, then sends `{ type }` and the state to the extension. The type is the action name or object passed as the third argument, else `anonymousActionType`, else a name from `findCallerName` (parsed from the stack), else `anonymous`.", "files": ["src/middleware/devtools.ts"]}, {"text": "The inner initializer runs with the new `api.setState`, and the result is sent with `connection.init`.", "files": ["src/middleware/devtools.ts"]}, {"text": "The extension messages are handled: `JUMP_TO_STATE`, `ROLLBACK` and `IMPORT_STATE` set state through `setStateFromDevtools`, which turns recording off during the update so the change is not sent back. `RESET`, `COMMIT` and `PAUSE_RECORDING` are handled in the same switch.", "files": ["src/middleware/devtools.ts"]}, {"text": "For stores built with `redux`, an action sent from the DevTools calls `api.dispatch` (only when the store has `dispatchFromDevtools`).", "files": ["src/middleware/devtools.ts", "src/middleware/redux.ts"]}]}, {"id": "S6", "act": "Act 2: Add behaviour with middleware", "title": "A developer stacks middleware and adds a new one", "command": "create\u003cState>()(devtools(persist(immer((set) => ({ ... })), { name: 'x' })))", "summary": "A middleware is a function from initializer to initializer. Its type entry in `StoreMutators` tells TypeScript which methods the store gains.", "steps": [{"text": "`create\u003cState>()` is called with no argument, which returns a function that takes the initializer. This form lets TypeScript take the state type from the caller.", "files": ["src/react.ts", "src/vanilla.ts"]}, {"text": "The outermost middleware runs first when the store is created. Each calls the next one with `(set, get, api)`, possibly after replacing `api.setState` or `api.subscribe`. `immer` replaces `store.setState` with a version that wraps function updaters in `produce`.", "files": ["src/middleware/immer.ts"]}, {"text": "`subscribeWithSelector` is another example: it saves `api.subscribe`, replaces it with the selector-aware version, then calls the inner initializer.", "files": ["src/middleware/subscribeWithSelector.ts"]}, {"text": "Each middleware file has a `declare module '../vanilla'` block that adds a key such as `'zustand/immer'` to `StoreMutators`. The `Mutate` type in `src/vanilla.ts` applies these entries in order, so the final store type has the added methods.", "files": ["src/vanilla.ts", "src/middleware/immer.ts", "src/middleware/persist.ts", "src/middleware/devtools.ts"]}, {"text": "To add a middleware: create a file in `src/middleware/`, add its `StoreMutators` entry, export it from `src/middleware.ts` (and from `src/index.ts` if it should be in the main entry), and add tests. `tests/middlewareTypes.test.tsx` checks type composition.", "files": ["src/middleware.ts", "src/index.ts", "tests/middlewareTypes.test.tsx"]}]}, {"id": "S7", "act": "Act 3: Servers and releases", "title": "A component renders on the server and hydrates on the client", "command": "", "summary": "The hook passes `getInitialState` as the server snapshot, and `ssrSafe` can block updates during server rendering.", "steps": [{"text": "During server rendering and hydration, `useSyncExternalStore` calls its third argument, so `useStore` returns `selector(api.getInitialState())`.", "files": ["src/react.ts"]}, {"text": "The hydration render therefore matches the server HTML, and React then re-renders with the current state. `tests/ssr.test.tsx` checks two cases: a `Counter` that increases the store in an effect after hydration, and a `setState` call during hydration, with no console errors in the second case.", "files": ["src/react.ts", "tests/ssr.test.tsx"]}, {"text": "With `ssrSafe`, when `window` is undefined the initializer replaces `api.setState` and the `set` it passes down with a function that throws `Cannot set state of Zustand store in SSR`.", "files": ["src/middleware/ssrSafe.ts"]}]}, {"id": "S8", "act": "Act 3: Servers and releases", "title": "A maintainer builds the package", "command": "pnpm build", "summary": "Rollup runs once per entry point, then scripts patch the output and copy files into `dist`.", "steps": [{"text": "`pnpm build` removes `dist`, runs every `build:*` script, then runs `postbuild`.", "files": ["package.json"]}, {"text": "Each `build:*` script runs `rollup -c` with a flag such as `--config-middleware_immer`. The default function in `rollup.config.mjs` turns the flag into an entry path (`_` becomes `/`) and returns a CommonJS config and an ESM config. `index` also gets a declarations config.", "files": ["rollup.config.mjs", "package.json"]}, {"text": "Both configs mark non-relative imports as external, alias the other entry points to `zustand/...` paths from the `entries` list so they are not bundled twice, and replace `import.meta.env?.MODE`.", "files": ["rollup.config.mjs"]}, {"text": "`postbuild` rewrites paths in declarations, copies `dist/src/*` into place, writes a `dist/package.json` with `private` false, and renames ESM declarations to `.d.mts`.", "files": ["package.json"]}]}], "guide": [{"text": "Read the map first: it lists the four parts and how they depend on each other.", "story": null, "part": null}, {"text": "the main path: how `create` builds a store and a hook, and what happens on an update.", "story": "S1", "part": null}, {"text": "the store itself, which everything else calls.", "story": null, "part": "core"}, {"text": "the hook and the shallow helpers built on that store.", "story": null, "part": "react"}, {"text": "one middleware in full, to see how a wrapper adds behaviour.", "story": "S4", "part": null}, {"text": "the rest of the middleware.", "story": null, "part": "middleware"}, {"text": "how middleware stack and how their types compose.", "story": "S6", "part": null}, {"text": "the build and test setup, last, because nothing else depends on it.", "story": null, "part": "build"}], "files": {"eslint.config.mjs": {"lang": "javascript", "lines": 110, "purpose": "ESLint flat configuration: rule sets for TypeScript, imports, Vitest and jest-dom, and the ignored paths.", "role": "config", "problem": "B2", "part": "build", "stories": [], "outline": {"items": [], "consts": []}, "imports": [], "libs": ["@eslint/js", "@vitest/eslint-plugin", "eslint", "eslint-plugin-import", "eslint-plugin-jest-dom", "eslint-plugin-react", "eslint-plugin-react-hooks", "eslint-plugin-testing-library", "typescript-eslint"], "used_by": []}, "package.json": {"lang": "json", "lines": 180, "purpose": "Package metadata, dev dependencies and the scripts that build, test, lint and format the project.", "role": "config", "problem": "B1", "part": "build", "stories": ["S8"], "imports": [], "libs": [], "used_by": []}, "pnpm-workspace.yaml": {"lang": "yaml", "lines": 3, "purpose": "pnpm settings that stop selected packages (esbuild, unrs-resolver) from running build scripts on install.", "role": "config", "problem": "B1", "part": "build", "stories": [], "imports": [], "libs": [], "used_by": []}, "rollup.config.mjs": {"lang": "javascript", "lines": 105, "purpose": "Rollup configuration that builds each entry point as ESM and CommonJS bundles and emits type declarations.", "role": "config", "problem": "B1", "part": "build", "stories": ["S8"], "outline": {"items": [{"name": "entries", "kind": "value", "line": 11, "signature": "const entries", "note": "Maps the `vanilla`, `react` and `shallow` source files to their public names such as `zustand/vanilla`; each config aliases every entry except the one being built, so the others stay external imports.", "exported": true, "methods": [], "calls": [], "children": []}, {"name": "external", "kind": "function", "line": 18, "signature": "external(id)", "note": "Returns true for imports that do not start with `.` or the filesystem root, so packages stay out of the bundle.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "getEsbuild", "kind": "function", "line": 22, "signature": "getEsbuild()", "note": "Creates the esbuild plugin with target `es2018` and the repo's `tsconfig.json`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "createDeclarationConfig", "kind": "function", "line": 30, "signature": "createDeclarationConfig(input, output)", "note": "Returns the Rollup config that writes only `.d.ts` files to the output folder.", "exported": false, "methods": [], "calls": ["external"], "children": []}, {"name": "createESMConfig", "kind": "function", "line": 47, "signature": "createESMConfig(input, output)", "note": "Returns the Rollup config that writes one ESM file, aliasing other entry points and replacing `import.meta.env?.MODE`.", "exported": false, "methods": [], "calls": ["entries", "external", "getEsbuild"], "children": []}, {"name": "createCommonJSConfig", "kind": "function", "line": 75, "signature": "createCommonJSConfig(input, output)", "note": "Returns the Rollup config that writes one CommonJS file, replacing `import.meta.env?.MODE` with `process.env.NODE_ENV`.", "exported": false, "methods": [], "calls": ["entries", "external", "getEsbuild"], "children": []}, {"name": "default", "kind": "function", "line": 93, "signature": "default(args)", "note": "Reads the `--config-\u003centry>` flag and returns the configs for that entry, with declarations only for `index`.", "exported": true, "methods": [], "calls": ["createDeclarationConfig", "createESMConfig", "createCommonJSConfig"], "children": []}], "consts": []}, "imports": [], "libs": ["@rollup/plugin-alias", "@rollup/plugin-node-resolve", "@rollup/plugin-replace", "@rollup/plugin-typescript", "path", "rollup-plugin-esbuild"], "used_by": []}, "src/index.ts": {"lang": "typescript", "lines": 2, "purpose": "Package entry point that re-exports the core, the React hook and every middleware except `immer`.", "role": "helper", "problem": "C2", "part": "core", "stories": ["S1", "S6"], "outline": {"items": [], "consts": []}, "imports": [{"file": "src/react.ts", "names": ["*"]}, {"file": "src/vanilla.ts", "names": ["*"]}], "libs": [], "used_by": ["tests/basic.test.tsx", "tests/immer.test.tsx", "tests/middlewareTypes.test.tsx", "tests/persistAsync.test.tsx", "tests/persistSync.test.tsx", "tests/shallow.test.tsx", "tests/ssr.test.tsx", "tests/subscribe.test.tsx", "tests/types.test.tsx"]}, "src/middleware.ts": {"lang": "typescript", "lines": 17, "purpose": "Entry point for `zustand/middleware`. Re-exports every middleware except `immer`, which has its own entry point.", "role": "guard", "problem": "M7", "part": "middleware", "stories": ["S6"], "outline": {"items": [], "consts": []}, "imports": [{"file": "src/middleware/combine.ts", "names": ["combine"]}, {"file": "src/middleware/devtools.ts", "names": ["devtools", "DevtoolsOptions", "NamedSet"]}, {"file": "src/middleware/persist.ts", "names": ["persist", "createJSONStorage", "StateStorage", "StorageValue", "PersistStorage", "PersistOptions"]}, {"file": "src/middleware/redux.ts", "names": ["redux"]}, {"file": "src/middleware/ssrSafe.ts", "names": ["ssrSafe"]}, {"file": "src/middleware/subscribeWithSelector.ts", "names": ["subscribeWithSelector"]}], "libs": [], "used_by": ["tests/devtools.test.tsx", "tests/middlewareTypes.test.tsx", "tests/persistAsync.test.tsx", "tests/persistSync.test.tsx", "tests/subscribe.test.tsx", "tests/types.test.tsx", "tests/vanilla/subscribe.test.tsx"]}, "src/middleware/combine.ts": {"lang": "typescript", "lines": 15, "purpose": "Middleware that merges an initial state with the state returned by a creator function, so the state type is inferred.", "role": "worker", "problem": "M5", "part": "middleware", "stories": [], "outline": {"items": [{"name": "Write", "kind": "type", "line": 3, "signature": "type Write\u003cT, U>", "note": "Returns `T` with the keys of `U` replaced by `U`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "combine", "kind": "function", "line": 5, "signature": "combine\u003cT extends object, U extends object, Mps extends [StoreMutatorIdentifier, unknown][] = [], Mcs extends [StoreMut…", "note": "Returns an initializer that merges `initialState` with the object returned by `create`.", "exported": true, "methods": [], "calls": [], "children": []}], "consts": []}, "imports": [{"file": "src/vanilla.ts", "names": ["StateCreator", "StoreMutatorIdentifier"]}], "libs": [], "used_by": ["src/middleware.ts"]}, "src/middleware/devtools.ts": {"lang": "typescript", "lines": 437, "purpose": "Middleware that connects a store to the Redux DevTools browser extension and handles its time-travel messages.", "role": "worker", "problem": "M2", "part": "middleware", "stories": ["S5", "S6"], "outline": {"items": [{"name": "Config", "kind": "type", "line": 9, "signature": "type Config", "note": "Type of the options that the Redux DevTools extension `connect` accepts.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "Message", "kind": "type", "line": 23, "signature": "type Message", "note": "Shape of a message received from the extension.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "WithDispatch", "kind": "type", "line": 29, "signature": "type WithDispatch", "note": "Store shape that has `dispatch` and the `dispatchFromDevtools` flag.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "shouldDispatchFromDevtools", "kind": "function", "line": 34, "signature": "shouldDispatchFromDevtools(api: unknown)", "note": "Returns true when the store has `dispatchFromDevtools` set and `dispatch` is a function.", "exported": false, "methods": [], "calls": ["WithDispatch"], "children": []}, {"name": "Cast", "kind": "type", "line": 38, "signature": "type Cast\u003cT, U>", "note": "Returns `T` when it extends `U`, otherwise `U`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "Write", "kind": "type", "line": 39, "signature": "type Write\u003cT, U>", "note": "Returns `T` with the keys of `U` replaced by `U`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "TakeTwo", "kind": "type", "line": 40, "signature": "type TakeTwo\u003cT>", "note": "Returns the first two elements of a tuple type, using `undefined` for missing ones.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "WithDevtools", "kind": "type", "line": 60, "signature": "type WithDevtools\u003cS>", "note": "Store type after `devtools` has been applied.", "exported": false, "methods": [], "calls": ["Write", "StoreDevtools"], "children": []}, {"name": "Action", "kind": "type", "line": 62, "signature": "type Action", "note": "An action given to `setState`, either a string or an object with a `type`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "StoreDevtools", "kind": "type", "line": 68, "signature": "type StoreDevtools\u003cS>", "note": "Store fields added by `devtools`, which are a `setState` that takes an action name and a `devtools.cleanup` function.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "DevtoolsOptions", "kind": "type", "line": 84, "signature": "interface DevtoolsOptions extends Config", "note": "Options for `devtools`: the extension options plus `enabled`, `anonymousActionType` and `store`.", "exported": true, "methods": [], "calls": ["Config"], "children": []}, {"name": "Devtools", "kind": "type", "line": 91, "signature": "type Devtools", "note": "Types the public `devtools` function.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "DevtoolsImpl", "kind": "type", "line": 101, "signature": "type DevtoolsImpl", "note": "Types the internal implementation of `devtools`.", "exported": false, "methods": [], "calls": ["DevtoolsOptions"], "children": []}, {"name": "NamedSet", "kind": "type", "line": 106, "signature": "type NamedSet\u003cT>", "note": "Type of `setState` that also takes an action name or object.", "exported": true, "methods": [], "calls": ["WithDevtools"], "children": []}, {"name": "Connection", "kind": "type", "line": 108, "signature": "type Connection", "note": "Type of the connection object that the extension returns.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "ConnectionName", "kind": "type", "line": 111, "signature": "type ConnectionName", "note": "Name of a connection, a string or `undefined`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "StoreName", "kind": "type", "line": 112, "signature": "type StoreName", "note": "Name of one store on a shared connection.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "StoreInformation", "kind": "type", "line": 113, "signature": "type StoreInformation", "note": "Type of a store registered on a shared connection.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "ConnectionInformation", "kind": "type", "line": 114, "signature": "type ConnectionInformation", "note": "A connection and the stores that share it, keyed by store name.", "exported": false, "methods": [], "calls": ["Connection", "StoreName", "StoreInformation"], "children": []}, {"name": "getTrackedConnectionState", "kind": "function", "line": 121, "signature": "getTrackedConnectionState(name: string | undefined)", "note": "Returns the current state of every store on the named shared connection, keyed by store name.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "extractConnectionInformation", "kind": "function", "line": 131, "signature": "extractConnectionInformation(store: string | undefined, extensionConnector: NonNullable\u003c(typeof window)['__REDUX_DEVTOO…", "note": "Opens a new connection, or reuses the shared one for the same name when a `store` option is given.", "exported": false, "methods": [], "calls": ["DevtoolsOptions", "ConnectionInformation"], "children": []}, {"name": "removeStoreFromTrackedConnections", "kind": "function", "line": 156, "signature": "removeStoreFromTrackedConnections(name: string | undefined, store: string | undefined)", "note": "Removes a store from its shared connection and drops the connection when it has no stores left.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "findCallerName", "kind": "function", "line": 174, "signature": "findCallerName(stack: string | undefined)", "note": "Returns the name of the function that called `api.setState`, by parsing a stack trace, or `undefined`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "devtoolsImpl", "kind": "function", "line": 188, "signature": "devtoolsImpl(fn, devtoolsOptions = {})", "note": "Returns an initializer that sends each update to the extension as an action and applies extension commands such as jump, reset and import back to the store.", "exported": false, "methods": [], "calls": ["Message", "shouldDispatchFromDevtools", "Action", "StoreDevtools", "DevtoolsImpl", "NamedSet", "getTrackedConnectionState", "extractConnectionInformation", "removeStoreFromTrackedConnections", "findCallerName", "devtools", "parseJsonThen"], "children": []}, {"name": "devtools", "kind": "function", "line": 424, "signature": "devtools(fn, devtoolsOptions = {})", "note": "Middleware that, when `enabled` allows it and the Redux DevTools extension exists, sends an action and the state after each `setState` and applies extension messages (`JUMP_TO_STATE`, `ROLLBACK`, `RESET`, `IMPORT_STATE`, dispatched actions) to the store; otherwise it returns the initializer unchanged. It adds `api.devtools.cleanup`.", "exported": true, "methods": [], "calls": ["Devtools", "devtoolsImpl"], "children": []}, {"name": "parseJsonThen", "kind": "function", "line": 426, "signature": "parseJsonThen\u003cT>(stringified: string, fn: (parsed: T) => void)", "note": "Parses a JSON string and calls `fn` with the result, or logs an error when parsing fails.", "exported": false, "methods": [], "calls": [], "children": []}], "consts": []}, "imports": [{"file": "src/vanilla.ts", "names": ["StateCreator", "StoreApi", "StoreMutatorIdentifier"]}], "libs": ["@redux-devtools/extension"], "used_by": ["src/middleware.ts", "src/middleware/redux.ts"]}, "src/middleware/immer.ts": {"lang": "typescript", "lines": 87, "purpose": "Middleware that lets setState take an Immer recipe that mutates a draft of the state.", "role": "worker", "problem": "M3", "part": "middleware", "stories": ["S6"], "outline": {"items": [{"name": "Immer", "kind": "type", "line": 5, "signature": "type Immer", "note": "Types the public `immer` function.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "Write", "kind": "type", "line": 21, "signature": "type Write\u003cT, U>", "note": "Returns `T` with the keys of `U` replaced by `U`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "SkipTwo", "kind": "type", "line": 22, "signature": "type SkipTwo\u003cT>", "note": "Returns a tuple type without its first two elements.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "SetStateType", "kind": "type", "line": 36, "signature": "type SetStateType\u003cT extends unknown[]>", "note": "Returns the first parameter type of `setState` without function types.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "WithImmer", "kind": "type", "line": 38, "signature": "type WithImmer\u003cS>", "note": "Store type after `immer` has been applied.", "exported": false, "methods": [], "calls": ["Write", "StoreImmer"], "children": []}, {"name": "StoreImmer", "kind": "type", "line": 40, "signature": "type StoreImmer\u003cS>", "note": "Store type whose `setState` also accepts a function that mutates an Immer draft.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "ImmerImpl", "kind": "type", "line": 69, "signature": "type ImmerImpl", "note": "Types the internal implementation of `immer`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "immerImpl", "kind": "function", "line": 73, "signature": "immerImpl(initializer)", "note": "Returns an initializer that replaces `store.setState` so function updaters run through Immer's `produce`.", "exported": false, "methods": [], "calls": ["ImmerImpl"], "children": []}, {"name": "immer", "kind": "function", "line": 87, "signature": "immer(initializer)", "note": "Middleware that replaces `store.setState` so a function updater is wrapped in Immer `produce` and can mutate a draft; other values pass through unchanged. It is exported only from `zustand/middleware/immer`.", "exported": true, "methods": [], "calls": ["Immer", "immerImpl"], "children": []}], "consts": []}, "imports": [{"file": "src/vanilla.ts", "names": ["StateCreator", "StoreMutatorIdentifier"]}], "libs": ["immer"], "used_by": ["tests/immer.test.tsx", "tests/middlewareTypes.test.tsx"]}, "src/middleware/persist.ts": {"lang": "typescript", "lines": 403, "purpose": "Middleware that saves state to a storage backend and restores it when the store is created, with versioning and migration.", "role": "storekeeper", "problem": "M1", "part": "middleware", "stories": ["S4", "S6"], "outline": {"items": [{"name": "StateStorage", "kind": "type", "line": 7, "signature": "interface StateStorage\u003cR = unknown>", "note": "Describes a string storage such as `localStorage`, with `getItem`, `setItem` and `removeItem`, which may be async.", "exported": true, "methods": [], "calls": [], "children": []}, {"name": "StorageValue", "kind": "type", "line": 13, "signature": "type StorageValue\u003cS>", "note": "The saved value, which is the state and an optional version number.", "exported": true, "methods": [], "calls": [], "children": []}, {"name": "PersistStorage", "kind": "type", "line": 18, "signature": "interface PersistStorage\u003cS, R = unknown>", "note": "Describes a storage that reads and writes `StorageValue` objects instead of strings.", "exported": true, "methods": [], "calls": ["StorageValue"], "children": []}, {"name": "JsonStorageOptions", "kind": "type", "line": 26, "signature": "type JsonStorageOptions", "note": "Options for `createJSONStorage`, a `reviver` and a `replacer` for JSON.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "createJSONStorage", "kind": "function", "line": 31, "signature": "createJSONStorage\u003cS, R = unknown>(getStorage: () => StateStorage\u003cR>, options?: JsonStorageOptions)", "note": "Wraps a string storage so it reads and writes JSON, and returns `undefined` when `getStorage` throws.", "exported": true, "methods": [], "calls": ["StateStorage", "StorageValue", "PersistStorage", "JsonStorageOptions"], "children": []}, {"name": "PersistOptions", "kind": "type", "line": 63, "signature": "interface PersistOptions\u003cS, PersistedState = S, PersistReturn = unknown>", "note": "Options for `persist`: `name`, `storage`, `partialize`, `onRehydrateStorage`, `version`, `migrate`, `merge` and `skipHydration`.", "exported": true, "methods": [], "calls": ["PersistStorage"], "children": []}, {"name": "PersistListener", "kind": "type", "line": 123, "signature": "type PersistListener\u003cS>", "note": "Type of a function called with the state around hydration.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "StorePersist", "kind": "type", "line": 125, "signature": "type StorePersist\u003cS, Ps, Pr>", "note": "Store fields added by `persist`, which are `setState` returning the storage result and a `persist` object with hydration methods.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "Thenable", "kind": "type", "line": 148, "signature": "type Thenable\u003cValue>", "note": "Minimal promise-like type with `then` and `catch`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "toThenable", "kind": "function", "line": 157, "signature": "toThenable\u003cResult, Input>(fn: (input: Input) => Result | Promise\u003cResult> | Thenable\u003cResult>)", "note": "Wraps a function so its result can be chained with `then` and `catch` whether it returns a value, a promise or throws.", "exported": false, "methods": [], "calls": ["Thenable"], "children": []}, {"name": "persistImpl", "kind": "function", "line": 187, "signature": "persistImpl(config, baseOptions)", "note": "Returns an initializer that saves state after each update, loads and migrates stored state on creation, and adds `api.persist`.", "exported": false, "methods": [], "calls": ["PersistStorage", "createJSONStorage", "PersistListener", "StorePersist", "toThenable", "PersistImpl", "persist"], "children": []}, {"name": "Persist", "kind": "type", "line": 378, "signature": "type Persist", "note": "Types the public `persist` function.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "Write", "kind": "type", "line": 394, "signature": "type Write\u003cT, U>", "note": "Returns `T` with the keys of `U` replaced by `U`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "WithPersist", "kind": "type", "line": 396, "signature": "type WithPersist\u003cS, A>", "note": "Store type after `persist` has been applied.", "exported": false, "methods": [], "calls": ["StorePersist", "Write"], "children": []}, {"name": "PersistImpl", "kind": "type", "line": 398, "signature": "type PersistImpl", "note": "Types the internal implementation of `persist`.", "exported": false, "methods": [], "calls": ["PersistOptions"], "children": []}, {"name": "persist", "kind": "function", "line": 403, "signature": "persist(config, baseOptions)", "note": "Middleware that saves the state to a storage after each update and, unless `skipHydration` is set, loads, migrates and merges the stored state when the store is created; it adds `api.persist` with `setOptions`, `getOptions`, `clearStorage`, `rehydrate`, `hasHydrated`, `onHydrate` and `onFinishHydration`.", "exported": true, "methods": [], "calls": ["persistImpl", "Persist"], "children": []}], "consts": []}, "imports": [{"file": "src/vanilla.ts", "names": ["StateCreator", "StoreApi", "StoreMutatorIdentifier"]}], "libs": [], "used_by": ["src/middleware.ts"]}, "src/middleware/redux.ts": {"lang": "typescript", "lines": 50, "purpose": "Middleware that adds a dispatch function and a Redux-style reducer to a store.", "role": "worker", "problem": "M5", "part": "middleware", "stories": ["S5"], "outline": {"items": [{"name": "Write", "kind": "type", "line": 4, "signature": "type Write\u003cT, U>", "note": "Returns `T` with the keys of `U` replaced by `U`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "Action", "kind": "type", "line": 6, "signature": "type Action", "note": "Shape of a Redux action, an object with a string `type`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "StoreRedux", "kind": "type", "line": 8, "signature": "type StoreRedux\u003cA>", "note": "Store fields added by `redux`, which are `dispatch` and the `dispatchFromDevtools` flag.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "ReduxState", "kind": "type", "line": 13, "signature": "type ReduxState\u003cA>", "note": "State field added by `redux`, which is `dispatch`.", "exported": false, "methods": [], "calls": ["StoreRedux"], "children": []}, {"name": "WithRedux", "kind": "type", "line": 17, "signature": "type WithRedux\u003cS, A>", "note": "Store type after `redux` has been applied.", "exported": false, "methods": [], "calls": ["Write", "StoreRedux"], "children": []}, {"name": "Redux", "kind": "type", "line": 19, "signature": "type Redux", "note": "Types the public `redux` function, which takes a reducer and an initial state.", "exported": false, "methods": [], "calls": ["Action"], "children": []}, {"name": "ReduxImpl", "kind": "type", "line": 34, "signature": "type ReduxImpl", "note": "Types the internal implementation of `redux`.", "exported": false, "methods": [], "calls": ["Action", "ReduxState"], "children": []}, {"name": "reduxImpl", "kind": "function", "line": 39, "signature": "reduxImpl(reducer, initial)", "note": "Returns an initializer that sets `api.dispatch` to run the reducer through `set`, sets `dispatchFromDevtools`, and returns the initial state plus `dispatch`.", "exported": false, "methods": [], "calls": ["ReduxImpl"], "children": []}, {"name": "redux", "kind": "function", "line": 50, "signature": "redux(reducer, initial)", "note": "Middleware that takes a reducer and an initial state, adds `api.dispatch` and a `dispatch` state field that apply the reducer through `set` with the action as its name, and sets `dispatchFromDevtools` on the store.", "exported": true, "methods": [], "calls": ["Redux", "reduxImpl"], "children": []}], "consts": []}, "imports": [{"file": "src/middleware/devtools.ts", "names": ["NamedSet"]}, {"file": "src/vanilla.ts", "names": ["StateCreator", "StoreMutatorIdentifier"]}], "libs": [], "used_by": ["src/middleware.ts"]}, "src/middleware/ssrSafe.ts": {"lang": "typescript", "lines": 25, "purpose": "Experimental middleware that makes setState throw while rendering on the server.", "role": "worker", "problem": "M6", "part": "middleware", "stories": ["S7"], "outline": {"items": [{"name": "ssrSafe", "kind": "function", "line": 6, "signature": "ssrSafe\u003cT extends object, U extends object, Mps extends [StoreMutatorIdentifier, unknown][] = [], Mcs extends [StoreMut…", "note": "Returns an initializer that, when `isSSR` is true, replaces `set` and `api.setState` with a function that throws.", "exported": true, "methods": [], "calls": [], "children": []}], "consts": []}, "imports": [{"file": "src/vanilla.ts", "names": ["StateCreator", "StoreMutatorIdentifier"]}], "libs": [], "used_by": ["src/middleware.ts"]}, "src/middleware/subscribeWithSelector.ts": {"lang": "typescript", "lines": 73, "purpose": "Middleware that adds a subscribe overload taking a selector and an optional equality function.", "role": "worker", "problem": "M4", "part": "middleware", "stories": ["S6"], "outline": {"items": [{"name": "SubscribeWithSelector", "kind": "type", "line": 3, "signature": "type SubscribeWithSelector", "note": "Types the public `subscribeWithSelector` function.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "Write", "kind": "type", "line": 15, "signature": "type Write\u003cT, U>", "note": "Returns `T` with the keys of `U` replaced by `U`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "WithSelectorSubscribe", "kind": "type", "line": 17, "signature": "type WithSelectorSubscribe\u003cS>", "note": "Store type after `subscribeWithSelector` has been applied.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "StoreSubscribeWithSelector", "kind": "type", "line": 28, "signature": "type StoreSubscribeWithSelector\u003cT>", "note": "Type of `subscribe` with a second form that takes a selector, a listener and options.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "SubscribeWithSelectorImpl", "kind": "type", "line": 42, "signature": "type SubscribeWithSelectorImpl", "note": "Types the internal implementation of `subscribeWithSelector`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "subscribeWithSelectorImpl", "kind": "function", "line": 46, "signature": "subscribeWithSelectorImpl(fn)", "note": "Returns an initializer that replaces `api.subscribe` with a version that calls the listener only when the selected slice changes.", "exported": false, "methods": [], "calls": ["SubscribeWithSelectorImpl"], "children": []}, {"name": "subscribeWithSelector", "kind": "function", "line": 72, "signature": "subscribeWithSelector(fn)", "note": "Middleware that replaces `api.subscribe` with a version that also takes a selector, a listener and options (`equalityFn`, default `Object.is`, and `fireImmediately`); the listener runs only when the selected slice changes.", "exported": true, "methods": [], "calls": ["SubscribeWithSelector", "subscribeWithSelectorImpl"], "children": []}], "consts": []}, "imports": [{"file": "src/vanilla.ts", "names": ["StateCreator", "StoreMutatorIdentifier"]}], "libs": [], "used_by": ["src/middleware.ts"]}, "src/react.ts": {"lang": "typescript", "lines": 64, "purpose": "React bindings: the useStore hook and the create function that returns a store as a hook.", "role": "worker", "problem": "R1", "part": "react", "stories": ["S1", "S3", "S6", "S7"], "outline": {"items": [{"name": "ReadonlyStoreApi", "kind": "type", "line": 11, "signature": "type ReadonlyStoreApi\u003cT>", "note": "Store type without `setState`, which is all a hook needs.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "identity", "kind": "function", "line": 16, "signature": "identity\u003cT>(arg: T)", "note": "Returns its argument. Default selector for `useStore`.", "exported": false, "methods": [], "calls": ["ReadonlyStoreApi", "useStore"], "children": []}, {"name": "useStore", "kind": "function", "line": 26, "signature": "useStore\u003cTState, StateSlice>(api: ReadonlyStoreApi\u003cTState>, selector: (state: TState) => StateSlice = identity as any)", "note": "Reads a store in a component through `React.useSyncExternalStore` and returns the selected slice.", "exported": true, "methods": [], "calls": ["ReadonlyStoreApi", "identity"], "children": []}, {"name": "UseBoundStore", "kind": "type", "line": 39, "signature": "type UseBoundStore\u003cS extends ReadonlyStoreApi\u003cunknown>>", "note": "Type of the hook that `create` returns, callable with or without a selector and carrying the store methods.", "exported": true, "methods": [], "calls": ["ReadonlyStoreApi"], "children": []}, {"name": "Create", "kind": "type", "line": 44, "signature": "type Create", "note": "Types `create` as a function that takes an initializer, or takes nothing and returns one that does.", "exported": false, "methods": [], "calls": ["UseBoundStore"], "children": []}, {"name": "createImpl", "kind": "function", "line": 53, "signature": "createImpl\u003cT>(createState: StateCreator\u003cT, [], []>)", "note": "Creates the store, builds a hook that calls `useStore` on it, and copies the store methods onto the hook.", "exported": false, "methods": [], "calls": ["useStore"], "children": []}, {"name": "create", "kind": "function", "line": 63, "signature": "create\u003cT>(createState: StateCreator\u003cT, [], []> | undefined)", "note": "Creates a store with `createStore` and returns a hook that reads a selected slice through `useStore`, with the store methods copied onto it; called with no argument it returns `createImpl`, which is the curried form `create\u003cT>()(initializer)`.", "exported": true, "methods": [], "calls": ["Create", "createImpl"], "children": []}], "consts": []}, "imports": [{"file": "src/vanilla.ts", "names": ["createStore", "ExtractState", "Mutate", "StateCreator", "StoreApi", "StoreMutatorIdentifier"]}], "libs": ["react"], "used_by": ["src/index.ts"]}, "src/react/shallow.ts": {"lang": "typescript", "lines": 12, "purpose": "Exports useShallow, a hook that keeps the previous selector result when it is shallow-equal to the new one.", "role": "worker", "problem": "R2", "part": "react", "stories": ["S3"], "outline": {"items": [{"name": "useShallow", "kind": "function", "line": 4, "signature": "useShallow\u003cS, U>(selector: (state: S) => U)", "note": "Wraps a selector so it returns the previous result when the new result is shallow-equal to it.", "exported": true, "methods": [], "calls": [], "children": []}], "consts": []}, "imports": [{"file": "src/vanilla/shallow.ts", "names": ["shallow"]}], "libs": ["react"], "used_by": ["src/shallow.ts"]}, "src/shallow.ts": {"lang": "typescript", "lines": 2, "purpose": "Entry point for `zustand/shallow`. Re-exports `shallow` and `useShallow`.", "role": "worker", "problem": "R2", "part": "react", "stories": [], "outline": {"items": [], "consts": []}, "imports": [{"file": "src/react/shallow.ts", "names": ["useShallow"]}, {"file": "src/vanilla/shallow.ts", "names": ["shallow"]}], "libs": [], "used_by": ["tests/shallow.test.tsx", "tests/vanilla/shallow.test.tsx"]}, "src/traditional.ts": {"lang": "typescript", "lines": 88, "purpose": "React bindings that take an equality function, built on useSyncExternalStoreWithSelector.", "role": "worker", "problem": "R3", "part": "react", "stories": [], "outline": {"items": [{"name": "ReadonlyStoreApi", "kind": "type", "line": 14, "signature": "type ReadonlyStoreApi\u003cT>", "note": "Store type without `setState`, which is all a hook needs.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "identity", "kind": "function", "line": 19, "signature": "identity\u003cT>(arg: T)", "note": "Returns its argument. Default selector for `useStoreWithEqualityFn`.", "exported": false, "methods": [], "calls": ["ReadonlyStoreApi", "useStoreWithEqualityFn"], "children": []}, {"name": "useStoreWithEqualityFn", "kind": "function", "line": 31, "signature": "useStoreWithEqualityFn\u003cTState, StateSlice>(api: ReadonlyStoreApi\u003cTState>, selector: (state: TState) => StateSlice = ide…", "note": "Reads a store through the `use-sync-external-store` shim, with an optional equality function for the selected slice.", "exported": true, "methods": [], "calls": ["ReadonlyStoreApi", "identity"], "children": []}, {"name": "UseBoundStoreWithEqualityFn", "kind": "type", "line": 47, "signature": "type UseBoundStoreWithEqualityFn\u003cS extends ReadonlyStoreApi\u003cunknown>>", "note": "Type of the hook that `createWithEqualityFn` returns, which also accepts an equality function.", "exported": true, "methods": [], "calls": ["ReadonlyStoreApi"], "children": []}, {"name": "CreateWithEqualityFn", "kind": "type", "line": 55, "signature": "type CreateWithEqualityFn", "note": "Types `createWithEqualityFn` as a function that takes an initializer and an optional default equality function, or takes nothing and returns one that does.", "exported": false, "methods": [], "calls": ["UseBoundStoreWithEqualityFn"], "children": []}, {"name": "createWithEqualityFnImpl", "kind": "function", "line": 66, "signature": "createWithEqualityFnImpl\u003cT>(createState: StateCreator\u003cT, [], []>, defaultEqualityFn?: \u003cU>(a: U, b: U) => boolean)", "note": "Creates the store and a hook that passes each call's equality function, or the default one, to `useStoreWithEqualityFn`.", "exported": false, "methods": [], "calls": ["useStoreWithEqualityFn"], "children": []}, {"name": "createWithEqualityFn", "kind": "function", "line": 82, "signature": "createWithEqualityFn\u003cT>(createState: StateCreator\u003cT, [], []> | undefined, defaultEqualityFn?: \u003cU>(a: U, b: U) => boolea…", "note": "Creates a store with `createStore` and returns a hook that reads a selected slice through `useStoreWithEqualityFn`, using `defaultEqualityFn` when the call passes none; called with no argument it returns the curried form.", "exported": true, "methods": [], "calls": ["CreateWithEqualityFn", "createWithEqualityFnImpl"], "children": []}], "consts": []}, "imports": [{"file": "src/vanilla.ts", "names": ["createStore", "ExtractState", "Mutate", "StateCreator", "StoreApi", "StoreMutatorIdentifier"]}], "libs": ["react", "use-sync-external-store"], "used_by": ["tests/basic.test.tsx", "tests/shallow.test.tsx"]}, "src/types.d.ts": {"lang": "typescript", "lines": 5, "purpose": "Type declaration for the optional import.meta.env object that the code reads.", "role": "rulebook", "problem": "B2", "part": "build", "stories": ["S5"], "outline": {"items": [{"name": "ImportMeta", "kind": "type", "line": 1, "signature": "interface ImportMeta", "note": "Adds an optional `env.MODE` string to `import.meta`, which `devtools` reads.", "exported": false, "methods": [], "calls": [], "children": []}], "consts": []}, "imports": [], "libs": [], "used_by": []}, "src/vanilla.ts": {"lang": "typescript", "lines": 100, "purpose": "The core store, with no React dependency: createStore plus the types for stores and middleware.", "role": "worker", "problem": "C1", "part": "core", "stories": ["S1", "S2", "S4", "S6"], "outline": {"items": [{"name": "SetStateInternal", "kind": "type", "line": 1, "signature": "type SetStateInternal\u003cT>", "note": "Types `setState` as two overloads: merge a partial state (or updater function), or replace the whole state when `replace` is true.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "StoreApi", "kind": "type", "line": 9, "signature": "interface StoreApi\u003cT>", "note": "Describes a store, with `setState`, `getState`, `getInitialState` and `subscribe`.", "exported": true, "methods": [], "calls": ["SetStateInternal"], "children": []}, {"name": "ExtractState", "kind": "type", "line": 16, "signature": "type ExtractState\u003cS>", "note": "Returns the state type of a store type by reading its `getState` return type.", "exported": true, "methods": [], "calls": [], "children": []}, {"name": "Get", "kind": "type", "line": 18, "signature": "type Get\u003cT, K, F>", "note": "Returns the type of key `K` on `T` when it exists, otherwise `F`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "Mutate", "kind": "type", "line": 20, "signature": "type Mutate\u003cS, Ms>", "note": "Applies a list of middleware type entries from `StoreMutators` to a store type, in order.", "exported": true, "methods": [], "calls": [], "children": []}, {"name": "StateCreator", "kind": "type", "line": 28, "signature": "type StateCreator\u003cT, Mis extends [StoreMutatorIdentifier, unknown][] = [], Mos extends [StoreMutatorIdentifier, unknown…", "note": "Types the function `(setState, getState, store) => state` that users and middleware pass to `create`.", "exported": true, "methods": [], "calls": ["StoreMutatorIdentifier"], "children": []}, {"name": "StoreMutators", "kind": "type", "line": 40, "signature": "interface StoreMutators\u003cS, A>", "note": "Empty interface that each middleware extends with `declare module` to describe how it changes the store type.", "exported": true, "methods": [], "calls": [], "children": []}, {"name": "StoreMutatorIdentifier", "kind": "type", "line": 41, "signature": "type StoreMutatorIdentifier", "note": "Union of the keys added to `StoreMutators`, such as `'zustand/persist'`.", "exported": true, "methods": [], "calls": ["StoreMutators"], "children": []}, {"name": "CreateStore", "kind": "type", "line": 43, "signature": "type CreateStore", "note": "Types `createStore` as a function that takes an initializer, or takes nothing and returns one that does.", "exported": false, "methods": [], "calls": ["StoreApi", "Mutate", "StateCreator", "StoreMutatorIdentifier"], "children": []}, {"name": "CreateStoreImpl", "kind": "type", "line": 53, "signature": "type CreateStoreImpl", "note": "Types the internal implementation that takes an initializer and returns the store.", "exported": false, "methods": [], "calls": ["StoreMutatorIdentifier"], "children": []}, {"name": "createStoreImpl", "kind": "function", "line": 60, "signature": "createStoreImpl(createState)", "note": "Creates a store: builds `setState`, `getState`, `getInitialState` and `subscribe` around a listener set, then calls the initializer to get the initial state.", "exported": false, "methods": [], "calls": ["StoreApi", "CreateStoreImpl"], "children": []}, {"name": "createStore", "kind": "function", "line": 99, "signature": "createStore(createState)", "note": "Creates a store from a state initializer and returns its api (`setState`, `getState`, `getInitialState`, `subscribe`); called with no argument it returns `createStoreImpl`, which is the curried form `createStore\u003cT>()(initializer)`.", "exported": true, "methods": [], "calls": ["CreateStore", "createStoreImpl"], "children": []}], "consts": []}, "imports": [], "libs": [], "used_by": ["src/index.ts", "src/middleware/combine.ts", "src/middleware/devtools.ts", "src/middleware/immer.ts", "src/middleware/persist.ts", "src/middleware/redux.ts", "src/middleware/ssrSafe.ts", "src/middleware/subscribeWithSelector.ts", "src/react.ts", "src/traditional.ts", "tests/devtools.test.tsx", "tests/immer.test.tsx", "tests/middlewareTypes.test.tsx", "tests/persistAsync.test.tsx", "tests/vanilla/basic.test.ts", "tests/vanilla/subscribe.test.tsx"]}, "src/vanilla/shallow.ts": {"lang": "typescript", "lines": 74, "purpose": "Exports shallow, a one-level equality check for primitives, arrays, Maps, Sets and plain objects.", "role": "worker", "problem": "R2", "part": "react", "stories": ["S3"], "outline": {"items": [{"name": "isIterable", "kind": "function", "line": 1, "signature": "isIterable(obj: object)", "note": "Returns true when the object has `Symbol.iterator`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "hasIterableEntries", "kind": "function", "line": 4, "signature": "hasIterableEntries(value: Iterable\u003cunknown>)", "note": "Returns true if the value has an `entries` property, so `shallow` compares Maps and Sets by their entries; it checks only that the property exists.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "compareEntries", "kind": "function", "line": 12, "signature": "compareEntries(valueA: { entries(): Iterable\u003c[unknown, unknown]> }, valueB: { entries(): Iterable\u003c[unknown, unknown]> })", "note": "Returns true when two objects with `entries()` have the same size and `Object.is`-equal values for every key.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "compareIterables", "kind": "function", "line": 30, "signature": "compareIterables(valueA: Iterable\u003cunknown>, valueB: Iterable\u003cunknown>)", "note": "Returns true when two iterables yield `Object.is`-equal values in the same order and end together.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "shallow", "kind": "function", "line": 48, "signature": "shallow\u003cT>(valueA: T, valueB: T)", "note": "Returns true when two values are identical or have equal top-level entries, comparing Maps, Sets, other iterables and plain objects.", "exported": true, "methods": [], "calls": ["isIterable", "hasIterableEntries", "compareEntries", "compareIterables"], "children": []}], "consts": []}, "imports": [], "libs": [], "used_by": ["src/react/shallow.ts", "src/shallow.ts"]}, "tests/basic.test.tsx": {"lang": "typescript", "lines": 744, "purpose": "", "role": "test", "problem": "R1", "part": "react", "stories": [], "outline": {"items": [{"name": "CounterState", "kind": "type", "line": 45, "signature": "type CounterState", "note": "State type with `count` and `inc`.", "exported": false, "methods": [], "calls": [], "children": []}], "consts": []}, "imports": [{"file": "src/index.ts", "names": ["create", "StoreApi"]}, {"file": "src/traditional.ts", "names": ["createWithEqualityFn"]}], "libs": ["@testing-library/react", "react", "react-dom", "vitest"], "used_by": []}, "tests/devtools.test.tsx": {"lang": "typescript", "lines": 2687, "purpose": "Tests `devtools` against a mock Redux DevTools extension, covering connections, action names, and messages from the extension.", "role": "test", "problem": "M2", "part": "middleware", "stories": [], "outline": {"items": [{"name": "TupleOfEqualLengthH", "kind": "type", "line": 7, "signature": "type TupleOfEqualLengthH\u003cArr extends unknown[], T, Acc extends T[]>", "note": "Builds a tuple of `T` with the same length as `Arr`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "TupleOfEqualLength", "kind": "type", "line": 14, "signature": "type TupleOfEqualLength\u003cArr extends unknown[], T>", "note": "Returns a tuple type of `T` with the length of `Arr`, or `T[]` when the length is not fixed.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "Connection", "kind": "type", "line": 18, "signature": "type Connection", "note": "Mock connection that holds the extension callbacks and the mock API.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "assertAllAreDefined", "kind": "function", "line": 32, "signature": "assertAllAreDefined\u003cT>(arr: (T | undefined)[])", "note": "Throws when any array element is `undefined`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "getNamedConnectionApis", "kind": "function", "line": 37, "signature": "getNamedConnectionApis\u003cKeys extends (string | undefined)[]>(...keys: Keys)", "note": "Returns the mock connection API for each given connection name, and throws if any name has no connection.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "getNamedConnectionSubscribers", "kind": "function", "line": 44, "signature": "getNamedConnectionSubscribers\u003cKeys extends (string | undefined)[]>(...keys: Keys)", "note": "Returns the one message callback registered for each given connection name, and throws if a name has no connection or does not have exactly one callback.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "getUnnamedConnectionApis", "kind": "function", "line": 58, "signature": "getUnnamedConnectionApis\u003cKeys extends string[]>(...keys: Keys)", "note": "Returns the mock APIs for connections without a name, by connection id.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "getUnnamedConnectionSubscribers", "kind": "function", "line": 63, "signature": "getUnnamedConnectionSubscribers\u003cKeys extends string[]>(...keys: Keys)", "note": "Returns the message callbacks for connections without a name, by connection id.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "getKeyFromOptions", "kind": "function", "line": 78, "signature": "getKeyFromOptions(options: any)", "note": "Returns the connection key, which is the name, or `name|testStore` when `testStore` is set.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "extensionConnector", "kind": "table", "line": 86, "signature": "extensionConnector = {...}", "note": "Mock extension whose `connect` records each connection so tests can inspect calls and send messages.", "exported": false, "methods": [], "calls": ["Connection", "getKeyFromOptions"], "children": []}], "consts": []}, "imports": [{"file": "src/middleware.ts", "names": ["devtools", "redux"]}, {"file": "src/vanilla.ts", "names": ["createStore", "StoreApi"]}], "libs": ["vitest"], "used_by": []}, "tests/immer.test.tsx": {"lang": "typescript", "lines": 74, "purpose": "", "role": "test", "problem": "M3", "part": "middleware", "stories": [], "outline": {"items": [], "consts": []}, "imports": [{"file": "src/index.ts", "names": ["create"]}, {"file": "src/middleware/immer.ts", "names": ["immer"]}, {"file": "src/vanilla.ts", "names": ["createStore"]}], "libs": ["vitest"], "used_by": []}, "tests/middlewareTypes.test.tsx": {"lang": "typescript", "lines": 859, "purpose": "Type-level and runtime tests that stacked middleware keep the right store types.", "role": "test", "problem": "M7", "part": "middleware", "stories": ["S6"], "outline": {"items": [{"name": "CounterState", "kind": "type", "line": 14, "signature": "type CounterState", "note": "State type with `count` and `inc`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "ExampleStateCreator", "kind": "type", "line": 19, "signature": "type ExampleStateCreator\u003cT, A>", "note": "Type of a sample middleware, used to test custom `StoreMutators` entries.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "Write", "kind": "type", "line": 27, "signature": "type Write\u003cT, U>", "note": "Returns `T` with the keys of `U` replaced by `U`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "StoreModifyAllButSetState", "kind": "type", "line": 28, "signature": "type StoreModifyAllButSetState\u003cS, A>", "note": "Store type without `setState`, used to test a custom mutator.", "exported": false, "methods": [], "calls": [], "children": []}], "consts": []}, "imports": [{"file": "src/index.ts", "names": ["create", "StateCreator", "StoreApi", "StoreMutatorIdentifier"]}, {"file": "src/middleware.ts", "names": ["combine", "devtools", "persist", "redux", "subscribeWithSelector"]}, {"file": "src/middleware/immer.ts", "names": ["immer"]}, {"file": "src/vanilla.ts", "names": ["createStore"]}], "libs": ["vitest"], "used_by": []}, "tests/persistAsync.test.tsx": {"lang": "typescript", "lines": 1244, "purpose": "Tests `persist` with asynchronous storages, covering hydration timing, migration, and concurrent hydrations.", "role": "test", "problem": "M1", "part": "middleware", "stories": [], "outline": {"items": [{"name": "createPersistantStore", "kind": "function", "line": 11, "signature": "createPersistantStore(initialValue: string | null)", "note": "Creates an in-memory async storage that waits 10 ms per call, with spies on each method.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "Deferred", "kind": "type", "line": 1068, "signature": "type Deferred\u003cT>", "note": "Holds a promise and the function that resolves it.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "deferred", "kind": "function", "line": 1073, "signature": "deferred\u003cT,>()", "note": "Creates a promise that the test resolves by hand.", "exported": false, "methods": [], "calls": ["Deferred"], "children": []}], "consts": []}, "imports": [{"file": "src/index.ts", "names": ["create"]}, {"file": "src/middleware.ts", "names": ["createJSONStorage", "persist"]}, {"file": "src/vanilla.ts", "names": ["createStore"]}, {"file": "tests/test-utils.ts", "names": ["replacer", "reviver", "sleep"]}], "libs": ["@testing-library/react", "react", "vitest"], "used_by": []}, "tests/persistSync.test.tsx": {"lang": "typescript", "lines": 760, "purpose": "Tests `persist` with synchronous storages, covering hydration, migration, merge and storage options.", "role": "test", "problem": "M1", "part": "middleware", "stories": [], "outline": {"items": [{"name": "createPersistentStore", "kind": "function", "line": 8, "signature": "createPersistentStore(initialValue: string | null)", "note": "Creates an in-memory sync storage with spies on `getItem`, `setItem` and `removeItem`.", "exported": false, "methods": [], "calls": [], "children": []}], "consts": []}, "imports": [{"file": "src/index.ts", "names": ["create"]}, {"file": "src/middleware.ts", "names": ["createJSONStorage", "persist"]}, {"file": "tests/test-utils.ts", "names": ["replacer", "reviver"]}], "libs": ["vitest"], "used_by": []}, "tests/setup.ts": {"lang": "typescript", "lines": 1, "purpose": "", "role": "test", "problem": "B3", "part": "build", "stories": [], "outline": {"items": [], "consts": []}, "imports": [], "libs": ["@testing-library/jest-dom"], "used_by": []}, "tests/shallow.test.tsx": {"lang": "typescript", "lines": 190, "purpose": "", "role": "test", "problem": "R2", "part": "react", "stories": [], "outline": {"items": [], "consts": []}, "imports": [{"file": "src/index.ts", "names": ["create"]}, {"file": "src/shallow.ts", "names": ["shallow", "useShallow"]}, {"file": "src/traditional.ts", "names": ["createWithEqualityFn"]}], "libs": ["@testing-library/react", "react", "vitest"], "used_by": []}, "tests/ssr.test.tsx": {"lang": "typescript", "lines": 113, "purpose": "", "role": "test", "problem": "R1", "part": "react", "stories": ["S7"], "outline": {"items": [{"name": "BearStoreState", "kind": "type", "line": 7, "signature": "interface BearStoreState", "note": "State type with `bears`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "BearStoreAction", "kind": "type", "line": 11, "signature": "interface BearStoreAction", "note": "Action type with `increasePopulation`.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "Counter", "kind": "function", "line": 21, "signature": "Counter()", "note": "Component that shows `bears` and increases the count in an effect.", "exported": false, "methods": [], "calls": [], "children": []}], "consts": []}, "imports": [{"file": "src/index.ts", "names": ["create"]}], "libs": ["@testing-library/react", "react", "react-dom", "vitest"], "used_by": []}, "tests/subscribe.test.tsx": {"lang": "typescript", "lines": 136, "purpose": "", "role": "test", "problem": "M4", "part": "middleware", "stories": [], "outline": {"items": [], "consts": []}, "imports": [{"file": "src/index.ts", "names": ["create"]}, {"file": "src/middleware.ts", "names": ["subscribeWithSelector"]}], "libs": ["vitest"], "used_by": []}, "tests/test-utils.ts": {"lang": "typescript", "lines": 37, "purpose": "", "role": "test", "problem": "B3", "part": "build", "stories": [], "outline": {"items": [{"name": "ReplacedMap", "kind": "type", "line": 1, "signature": "type ReplacedMap", "note": "Shape a Map takes after `replacer` turns it into JSON.", "exported": false, "methods": [], "calls": [], "children": []}, {"name": "replacer", "kind": "function", "line": 6, "signature": "replacer(key: string, value: unknown)", "note": "Turns a Map into `{ type, value }` for `JSON.stringify` and returns other values unchanged.", "exported": true, "methods": [], "calls": ["ReplacedMap"], "children": []}, {"name": "reviver", "kind": "function", "line": 20, "signature": "reviver(key: string, value: ReplacedMap | unknown)", "note": "Turns a `{ type, value }` object back into a Map for `JSON.parse`.", "exported": true, "methods": [], "calls": ["ReplacedMap", "isReplacedMap"], "children": []}, {"name": "isReplacedMap", "kind": "function", "line": 27, "signature": "isReplacedMap(value: any)", "note": "Returns true when the value looks like a serialized Map.", "exported": false, "methods": [], "calls": ["ReplacedMap"], "children": []}, {"name": "sleep", "kind": "function", "line": 35, "signature": "sleep(ms: number)", "note": "Returns a promise that resolves after `ms` milliseconds.", "exported": true, "methods": [], "calls": [], "children": []}], "consts": []}, "imports": [], "libs": [], "used_by": ["tests/persistAsync.test.tsx", "tests/persistSync.test.tsx"]}, "tests/types.test.tsx": {"lang": "typescript", "lines": 252, "purpose": "", "role": "test", "problem": "C2", "part": "core", "stories": [], "outline": {"items": [{"name": "AssertEqual", "kind": "type", "line": 103, "signature": "type AssertEqual\u003cType, Expected>", "note": "Resolves to `true` when two types are mutually assignable, otherwise `never`.", "exported": false, "methods": [], "calls": [], "children": []}], "consts": []}, "imports": [{"file": "src/index.ts", "names": ["create", "StateCreator", "StoreApi", "StoreMutatorIdentifier", "UseBoundStore"]}, {"file": "src/middleware.ts", "names": ["persist"]}], "libs": ["vitest"], "used_by": []}, "tests/vanilla/basic.test.ts": {"lang": "typescript", "lines": 147, "purpose": "", "role": "test", "problem": "C1", "part": "core", "stories": ["S2"], "outline": {"items": [{"name": "CounterState", "kind": "type", "line": 41, "signature": "type CounterState", "note": "State type with `count` and `inc`.", "exported": false, "methods": [], "calls": [], "children": []}], "consts": []}, "imports": [{"file": "src/vanilla.ts", "names": ["createStore", "StoreApi"]}], "libs": ["vitest"], "used_by": []}, "tests/vanilla/shallow.test.tsx": {"lang": "typescript", "lines": 236, "purpose": "", "role": "test", "problem": "R2", "part": "react", "stories": [], "outline": {"items": [], "consts": []}, "imports": [{"file": "src/shallow.ts", "names": ["shallow"]}], "libs": ["vitest"], "used_by": []}, "tests/vanilla/subscribe.test.tsx": {"lang": "typescript", "lines": 134, "purpose": "", "role": "test", "problem": "C1", "part": "core", "stories": [], "outline": {"items": [], "consts": []}, "imports": [{"file": "src/middleware.ts", "names": ["subscribeWithSelector"]}, {"file": "src/vanilla.ts", "names": ["createStore"]}], "libs": ["vitest"], "used_by": []}, "tsconfig.json": {"lang": "json", "lines": 25, "purpose": "TypeScript compiler options and the files included in the project.", "role": "config", "problem": "B2", "part": "build", "stories": [], "imports": [], "libs": [], "used_by": []}, "vitest.config.mts": {"lang": "typescript", "lines": 29, "purpose": "Vitest configuration: jsdom environment, tests directory, setup file, coverage settings and module aliases for zustand imports.", "role": "worker", "problem": "B3", "part": "build", "stories": [], "outline": {"items": [], "consts": []}, "imports": [], "libs": ["path", "vitest"], "used_by": []}}, "warnings": []};
+
+/* ---------- helpers ---------- */
+const $ = (s, r) => (r || document).querySelector(s);
+function esc(v) {
+  return String(v == null ? "" : v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+/* Prose: escape first, then turn `code` spans into <code>. Single line, no nested backticks. */
+function pr(v) {
+  return esc(v).replace(/`([^`\n]+)`/g, "<code>$1</code>");
+}
+const noTicks = v => String(v == null ? "" : v).replace(/`/g, "");
+const arr = v => Array.isArray(v) ? v : [];
+const strs = v => arr(v).map(str).filter(Boolean);
+const obj = v => (v && typeof v === "object" && !Array.isArray(v)) ? v : {};
+const str = v => v == null ? "" : String(v);
+const num = v => (typeof v === "number" && isFinite(v)) ? v : 0;
+const fmt = n => num(n).toLocaleString("en-US");
+const plural = (n, a, b) => n + " " + (n === 1 ? a : (b || a + "s"));
+const safeColor = c => /^#[0-9a-fA-F]{3,8}$/.test(str(c)) ? c : null;
+const PALETTE = ["#3b82f6","#10b981","#f59e0b","#a855f7","#ef4444","#06b6d4","#84cc16","#ec4899","#f97316","#64748b"];
+
+function normalize(d) {
+  d = obj(d);
+  const proj = obj(d.project);
+  const N = {
+    tool: Object.assign({name: "RepoTour", version: "", url: ""}, obj(d.tool)),
+    mode: d.mode === "auto" ? "auto" : "written",
+    project: {name: str(proj.name) || "Repository tour", tagline: str(proj.tagline), overview: str(proj.overview),
+              repo_url: /^https?:\/\//i.test(str(proj.repo_url)) ? str(proj.repo_url).replace(/\/+$/, "") : "",
+              branch: str(proj.branch) || "main"},
+    built_at: str(d.built_at),
+    stats: obj(d.stats),
+    roles: arr(d.roles).map(r => obj(r)),
+    parts: arr(d.parts).map((p, i) => {
+      p = obj(p);
+      return {id: str(p.id), name: str(p.name) || str(p.id), role: str(p.role), summary: str(p.summary), folders: arr(p.folders),
+              color: safeColor(p.color) || PALETTE[i % PALETTE.length], problems: arr(p.problems), files: num(p.files), lines: num(p.lines)};
+    }),
+    part_links: arr(d.part_links).map(l => obj(l)),
+    problems: arr(d.problems).map(p => {
+      p = obj(p);
+      return {id: str(p.id), part: str(p.part), title: str(p.title), without: str(p.without), fix: str(p.fix),
+              files: strs(p.files), tests: strs(p.tests), placeholder: !!p.placeholder};
+    }),
+    stories: arr(d.stories).map(s => {
+      s = obj(s);
+      return {id: str(s.id), act: str(s.act), title: str(s.title), command: str(s.command), summary: str(s.summary),
+              steps: arr(s.steps).map(t => ({text: str(obj(t).text), files: strs(obj(t).files)}))};
+    }),
+    guide: arr(d.guide).map(g => ({text: str(obj(g).text), story: obj(g).story || null, part: obj(g).part || null})),
+    files: obj(d.files),
+    warnings: arr(d.warnings).map(str)
+  };
+  N.paths = Object.keys(N.files).sort();
+  N.roleById = {}; N.roles.forEach(r => { N.roleById[str(r.id)] = r; });
+  N.partById = {}; N.parts.forEach(p => { N.partById[p.id] = p; });
+  N.problemById = {}; N.problems.forEach(p => { N.problemById[p.id] = p; });
+  N.storyById = {}; N.stories.forEach(s => { N.storyById[s.id] = s; });
+  return N;
+}
+const D = normalize(DATA);
+const F = p => { const f = D.files[p]; return f && typeof f === "object" ? f : null; };
+
+/* ---------- link builders ---------- */
+const fileHref = p => "#/file/" + str(p).split("/").map(encodeURIComponent).join("/");
+const partHref = id => "#/part/" + encodeURIComponent(id);
+const storyHref = id => "#/story/" + encodeURIComponent(id);
+function sourceUrl(path, line) {
+  if (!D.project.repo_url) return "";
+  return D.project.repo_url + "/blob/" + encodeURIComponent(D.project.branch).replace(/%2F/g, "/") + "/" +
+    str(path).split("/").map(encodeURIComponent).join("/") + (line ? "#L" + line : "");
+}
+function roleEmoji(id) { const r = D.roleById[str(id)]; return r && r.emoji ? r.emoji : "•"; }
+function roleName(id) { const r = D.roleById[str(id)]; return r && r.name ? r.name : (str(id) || "Unknown"); }
+function partColorStyle(id) {
+  const p = D.partById[id];
+  return p ? ` style="--pc:${esc(p.color)}"` : "";
+}
+const partLink = id => { const p = D.partById[id]; return p ? `<a href="${partHref(id)}">${esc(p.name)}</a>` : esc(id); };
+
+/* ---------- reusable fragments ---------- */
+function fileRow(path, opts) {
+  opts = opts || {};
+  const f = F(path);
+  const i = path.lastIndexOf("/");
+  const dir = i >= 0 ? path.slice(0, i + 1) : "", base = path.slice(i + 1);
+  const label = opts.base ? `<span class="path">${esc(base)}</span>` : `<span class="path"><span class="dir">${esc(dir)}</span>${esc(base)}</span>`;
+  const em = f ? `<span class="em" title="${esc(roleName(f.role))}">${esc(roleEmoji(f.role))}</span>` : `<span class="em" title="Not in this tour">?</span>`;
+  const purpose = f ? pr(f.purpose) : `<em>not in this tour</em>`;
+  const hit = opts.hit ? `<span class="hit">${pr(opts.hit)}</span>` : "";
+  return `<a class="row" href="${fileHref(path)}" title="${esc(path)}">${em}${label}<span class="purpose">${purpose}</span>` +
+    `<span class="lines">${f && f.lines ? fmt(f.lines) + " lines" : ""}</span>${hit}</a>`;
+}
+function rowsBlock(paths, limit, opts) {
+  paths = arr(paths);
+  if (!paths.length) return "";
+  limit = limit || 200;
+  const first = paths.slice(0, limit).map(p => fileRow(p, opts)).join("");
+  let more = "";
+  if (paths.length > limit) {
+    const id = "more" + (++moreSeq);
+    MORE[id] = {paths: paths.slice(limit), opts};
+    more = `<button class="more" type="button" data-more="${id}">Show ${fmt(paths.length - limit)} more files</button>`;
+  }
+  return `<div class="rows">${first}${more}</div>`;
+}
+let moreSeq = 0; const MORE = {};
+function paras(text) {
+  return str(text).split(/\n\s*\n/).map(s => s.trim()).filter(Boolean).map(s => `<p>${pr(s)}</p>`).join("");
+}
+function rolePill(id) { return `<span class="pill" title="${esc(noTicks((D.roleById[id] || {}).meaning || ""))}">${esc(roleEmoji(id))} ${esc(roleName(id))}</span>`; }
+
+/* ---------- views ---------- */
+function viewHome() {
+  const P = D.project, S = D.stats;
+  let h = `<h1>${esc(P.name)}</h1>`;
+  if (P.tagline) h += `<p class="tagline">${pr(P.tagline)}</p>`;
+  if (D.mode === "auto") {
+    h += `<div class="banner"><strong>Automatic tour.</strong> This tour was generated from the code alone, so parts are simply folders and there are no stories or guide yet. ` +
+      `To add written explanations, run <code>/repotour</code> in Claude Code, or run <code>repotour init</code> and edit <code>.repotour/tour.yaml</code>.</div>`;
+  }
+  if (P.overview) h += `<div class="prose">${paras(P.overview)}</div>`;
+  const langs = Object.entries(obj(S.languages)).sort((a, b) => num(b[1]) - num(a[1]));
+  h += `<div class="stats"><div class="stat"><b>${fmt(S.files != null ? S.files : D.paths.length)}</b><span>files</span></div>` +
+    `<div class="stat"><b>${fmt(S.lines)}</b><span>lines</span></div>` +
+    `<div class="stat"><b>${fmt(D.parts.length)}</b><span>parts</span></div>` +
+    (D.stories.length ? `<div class="stat"><b>${fmt(D.stories.length)}</b><span>stories</span></div>` : "") +
+    langs.map(([l, n]) => `<a class="stat" href="#/files?lang=${encodeURIComponent(l)}" style="color:inherit"><b>${fmt(n)}</b><span>${esc(l)}</span></a>`).join("") + `</div>`;
+
+  h += `<h2>Map of the parts</h2>`;
+  if (!D.parts.length) h += `<p class="empty">No parts found.</p>`;
+  else {
+    h += mapSvg();
+    h += `<div class="grid">` + D.parts.map(p =>
+      `<a class="card pcard" href="${partHref(p.id)}"${partColorStyle(p.id)}><h3>${esc(p.name)}</h3><div class="role">${pr(p.role)}</div>` +
+      (p.summary ? `<p class="small" style="margin:.3rem 0 .6rem">${pr(clip(p.summary, 170))}</p>` : "") +
+      `<div class="nums">${plural(p.files, "file")} &middot; ${fmt(p.lines)} lines &middot; ${plural(p.problems.length, "problem")}</div></a>`).join("") + `</div>`;
+  }
+
+  if (D.stories.length) {
+    h += `<h2>Stories</h2><p class="muted prose">Each story follows one thing that happens in the code, step by step.</p>` + storyList();
+  }
+  if (D.guide.length) {
+    h += `<h2>How to read this tour</h2><ol class="guide">` + D.guide.map(g => {
+      let lead = "";
+      if (g.story && D.storyById[g.story]) lead = `<a href="${storyHref(g.story)}">Story: ${esc(D.storyById[g.story].title)}</a>`;
+      else if (g.part && D.partById[g.part]) lead = `<a href="${partHref(g.part)}">${esc(D.partById[g.part].name)}</a>`;
+      return `<li>${lead}${lead && g.text ? " &mdash; " : ""}${pr(g.text)}</li>`;
+    }).join("") + `</ol>`;
+  }
+  if (D.roles.length) {
+    const counts = {};
+    D.paths.forEach(p => { const r = str(F(p) && F(p).role); counts[r] = (counts[r] || 0) + 1; });
+    h += `<h2>What the emoji mean</h2><p class="muted prose">Every file has a role. It says what kind of job the file does.</p><div class="legend">` +
+      D.roles.map(r => `<a class="role-item" href="#/files?role=${encodeURIComponent(str(r.id))}" style="color:inherit"><span class="em">${esc(r.emoji)}</span><span><b>${esc(r.name)}</b> <span class="muted small">${counts[str(r.id)] ? plural(counts[str(r.id)], "file") : ""}</span><small>${pr(r.meaning)}</small></span></a>`).join("") + `</div>`;
+  }
+  return h;
+}
+function clip(s, n) { s = str(s); return s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s; }
+
+function storyList() {
+  let h = "", act = null, open = false;
+  D.stories.forEach(s => {
+    if (s.act !== act || !open) {
+      if (open) h += `</ul>`;
+      if (s.act) h += `<div class="act">${esc(s.act)}</div>`;
+      h += `<ul class="storylist">`; open = true; act = s.act;
+    }
+    h += `<li><a class="story" href="${storyHref(s.id)}"><span class="t">${esc(s.title)}</span>` +
+      (s.summary ? `<br><span class="muted small">${pr(s.summary)}</span>` : "") + `</a></li>`;
+  });
+  return h + (open ? `</ul>` : "");
+}
+
+function mapSvg() {
+  const parts = D.parts;
+  const ids = new Set(parts.map(p => p.id));
+  const links = D.part_links.filter(l => ids.has(str(l.from)) && ids.has(str(l.to)) && l.from !== l.to && num(l.imports) > 0);
+  let h = `<div class="map">`;
+  if (parts.length <= 10 && parts.length > 0) {
+    const W = 780, H = parts.length === 1 ? 160 : parts.length <= 3 ? 280 : 350, nw = 168, nh = 58;
+    const cx = W / 2, cy = H / 2, rx = W / 2 - nw / 2 - 30, ry = H / 2 - nh / 2 - 26;
+    const pos = {};
+    parts.forEach((p, i) => {
+      if (parts.length === 1) { pos[p.id] = {x: cx, y: cy}; return; }
+      const a = -Math.PI / 2 + i * 2 * Math.PI / parts.length;
+      pos[p.id] = {x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a)};
+    });
+    const clipPt = (c, t) => {
+      const dx = t.x - c.x, dy = t.y - c.y;
+      const s = Math.min(dx ? (nw / 2 + 5) / Math.abs(dx) : 1e9, dy ? (nh / 2 + 5) / Math.abs(dy) : 1e9);
+      return {x: c.x + dx * s, y: c.y + dy * s};
+    };
+    const max = Math.max(1, ...links.map(l => num(l.imports)));
+    let edges = "";
+    links.forEach(l => {
+      const a = pos[l.from], b = pos[l.to];
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+      const bend = Math.min(60, len * 0.22);
+      const c = {x: mx + (-dy / len) * bend, y: my + (dx / len) * bend};
+      const s = clipPt(a, c), e = clipPt(b, c);
+      const w = 1.5 + 4.5 * num(l.imports) / max;
+      const lx = 0.25 * s.x + 0.5 * c.x + 0.25 * e.x, ly = 0.25 * s.y + 0.5 * c.y + 0.25 * e.y;
+      const nameA = (D.partById[l.from] || {}).name, nameB = (D.partById[l.to] || {}).name;
+      edges += `<g><title>${esc(nameA)} imports from ${esc(nameB)}: ${num(l.imports)} file-to-file imports</title>` +
+        `<path class="edge" d="M${s.x.toFixed(1)},${s.y.toFixed(1)} Q${c.x.toFixed(1)},${c.y.toFixed(1)} ${e.x.toFixed(1)},${e.y.toFixed(1)}" stroke-width="${w.toFixed(1)}" marker-end="url(#ah)"/>` +
+        `<text class="elabel" x="${lx.toFixed(1)}" y="${(ly + 4).toFixed(1)}" text-anchor="middle">${num(l.imports)}</text></g>`;
+    });
+    let nodes = "";
+    parts.forEach(p => {
+      const q = pos[p.id];
+      nodes += `<a href="${partHref(p.id)}" class="node" style="--pc:${esc(p.color)}"><rect x="${(q.x - nw / 2).toFixed(1)}" y="${(q.y - nh / 2).toFixed(1)}" width="${nw}" height="${nh}" rx="10"/>` +
+        `<text x="${q.x.toFixed(1)}" y="${(q.y - 3).toFixed(1)}" text-anchor="middle">${esc(clip(p.name, 20))}</text>` +
+        `<text class="sub" x="${q.x.toFixed(1)}" y="${(q.y + 15).toFixed(1)}" text-anchor="middle">${plural(p.files, "file")} &middot; ${fmt(p.lines)} lines</text></a>`;
+    });
+    h += `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Diagram of the parts and which parts import from which. Arrows point from the importing part to the part it uses.">` +
+      `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>` +
+      edges + nodes + `</svg>`;
+  }
+  if (links.length) {
+    h += `<div style="padding:6px 12px 10px"><div class="sub-h" style="margin-top:4px">Which part uses which <span style="text-transform:none;letter-spacing:0;font-weight:400">(arrow points to the part being used; number = files importing files)</span></div><ul class="deps">` +
+      links.slice().sort((a, b) => num(b.imports) - num(a.imports)).map(l =>
+        `<li>${partLink(l.from)}<span class="arrow">&rarr;</span>${partLink(l.to)} <span class="muted small">${plural(num(l.imports), "import")}</span></li>`).join("") + `</ul></div>`;
+  } else if (parts.length > 1) {
+    h += `<p class="muted small" style="padding:4px 12px">No imports between parts were found.</p>`;
+  }
+  return h + `</div>`;
+}
+
+function viewParts() {
+  let h = `<h1>Parts</h1><p class="tagline">The big areas of the repo.</p>`;
+  if (!D.parts.length) return h + `<p class="empty">No parts found.</p>`;
+  return h + `<div class="grid">` + D.parts.map(p =>
+    `<a class="card pcard" href="${partHref(p.id)}"${partColorStyle(p.id)}><h3>${esc(p.name)}</h3><div class="role">${pr(p.role)}</div>` +
+    `<p class="small" style="margin:.3rem 0 .6rem">${pr(clip(p.summary, 200))}</p>` +
+    `<div class="nums">${plural(p.files, "file")} &middot; ${fmt(p.lines)} lines &middot; ${plural(p.problems.length, "problem")}</div></a>`).join("") + `</div>`;
+}
+
+function viewPart(id) {
+  const p = D.partById[id];
+  if (!p) return notFound("part", id);
+  let h = `<div class="crumbs"><a href="#/">Home</a> / <a href="#/parts">Parts</a> / ${esc(p.name)}</div>`;
+  h += `<div class="phead"${partColorStyle(id)}><h1>${esc(p.name)}</h1>` + (p.role ? `<p class="tagline" style="margin:0">${pr(p.role)}</p>` : "") + `</div>`;
+  if (p.summary) h += `<div class="prose">${paras(p.summary)}</div>`;
+  h += `<div class="meta"><span class="pill">${plural(p.files, "file")}</span><span class="pill">${fmt(p.lines)} lines</span>` +
+    (p.folders.length ? `<span class="pill mono">${p.folders.map(esc).join(", ")}</span>` : "") + `</div>`;
+  const out = D.part_links.filter(l => l.from === id && D.partById[l.to]), inn = D.part_links.filter(l => l.to === id && D.partById[l.from]);
+  if (out.length || inn.length) {
+    h += `<div class="meta">` +
+      (out.length ? `<span class="small muted">Uses:</span> ` + out.map(l => `<a class="pill" href="${partHref(l.to)}">${esc(D.partById[l.to].name)} <span class="muted small">${num(l.imports)}</span></a>`).join("") : "") +
+      (inn.length ? ` <span class="small muted" style="margin-left:10px">Used by:</span> ` + inn.map(l => `<a class="pill" href="${partHref(l.from)}">${esc(D.partById[l.from].name)} <span class="muted small">${num(l.imports)}</span></a>`).join("") : "") + `</div>`;
+  }
+  const probs = D.problems.filter(x => x.part === id);
+  h += `<h2>${probs.length === 1 && probs[0].placeholder ? "Files" : "Problems this part solves"}</h2>`;
+  if (!probs.length) h += `<p class="empty">No problems are listed for this part.</p>`;
+  probs.forEach(x => {
+    h += `<section class="card problem" id="p-${esc(x.id)}"${partColorStyle(id)}><h3><span class="pid">${esc(x.id)}</span>${pr(x.title)}</h3>`;
+    if (x.placeholder) h += `<p class="placeholder-note">Files grouped automatically. Written explanations have not been added for this group.</p>`;
+    else {
+      if (x.without) h += `<span class="lbl">Without it</span><p class="prose" style="margin-top:2px">${pr(x.without)}</p>`;
+      if (x.fix) h += `<span class="lbl">The fix</span><p class="prose" style="margin-top:2px">${pr(x.fix)}</p>`;
+    }
+    if (x.files.length) h += `<div class="sub-h">Files (${x.files.length})</div>` + rowsBlock(x.files, 150);
+    if (x.tests.length) h += `<div class="sub-h">Tests (${x.tests.length})</div>` + rowsBlock(x.tests, 100);
+    if (!x.files.length && !x.tests.length) h += `<p class="empty">No files.</p>`;
+    h += `</section>`;
+  });
+  return h;
+}
+
+function viewStories() {
+  let h = `<h1>Stories</h1><p class="tagline">Follow one thing that happens in the code, step by step.</p>`;
+  return h + (D.stories.length ? storyList() : `<p class="empty">This tour has no stories.${D.mode === "auto" ? " Run /repotour in Claude Code to add some." : ""}</p>`);
+}
+
+function viewStory(id) {
+  const i = D.stories.findIndex(s => s.id === id);
+  if (i < 0) return notFound("story", id);
+  const s = D.stories[i];
+  let h = `<div class="crumbs"><a href="#/">Home</a> / <a href="#/stories">Stories</a>${s.act ? " / " + esc(s.act) : ""}</div><h1>${esc(s.title)}</h1>`;
+  if (s.summary) h += `<p class="tagline">${pr(s.summary)}</p>`;
+  if (s.command) h += `<div class="cmd"><code>${esc(s.command)}</code><button type="button" data-copy="${esc(s.command)}">Copy</button></div>`;
+  h += `<ol class="steps">` + s.steps.map((t, n) =>
+    `<li class="step"><span class="n">${n + 1}</span><div><p class="prose">${pr(t.text)}</p>${t.files.length ? rowsBlock(t.files, 50) : ""}</div></li>`).join("") + `</ol>`;
+  if (!s.steps.length) h += `<p class="empty">This story has no steps.</p>`;
+  const prev = D.stories[i - 1], next = D.stories[i + 1];
+  h += `<div class="pn"><span>${prev ? `<a href="${storyHref(prev.id)}"><small>&larr; Previous story</small>${esc(prev.title)}</a>` : ""}</span>` +
+    `<span>${next ? `<a href="${storyHref(next.id)}" style="text-align:right"><small>Next story &rarr;</small>${esc(next.title)}</a>` : ""}</span></div>`;
+  return h;
+}
+
+/* ---- search index ---- */
+let IDX = null;
+function outlineNames(items, acc) {
+  arr(items).forEach(it => {
+    it = obj(it);
+    acc.push(str(it.name), str(it.signature), noTicks(it.note));
+    arr(it.methods).forEach(m => acc.push(str(obj(m).name), noTicks(obj(m).note)));
+    outlineNames(it.children, acc);
+  });
+  return acc;
+}
+function buildIndex() {
+  if (IDX) return IDX;
+  IDX = D.paths.map(p => {
+    const f = F(p);
+    const names = outlineNames(obj(f.outline).items, []);
+    return {p, s: (p + " " + noTicks(f.purpose) + " " + names.join(" ")).toLowerCase(), n: names.map(x => x.toLowerCase())};
+  });
+  return IDX;
+}
+function matchWords(q) { return str(q).toLowerCase().split(/\s+/).filter(Boolean); }
+function hitHint(f, words) {
+  if (!words.length) return "";
+  const items = [];
+  (function walk(list) { arr(list).forEach(it => { it = obj(it); items.push(it); arr(it.methods).forEach(m => items.push(obj(m))); walk(it.children); }); })(obj(f.outline).items);
+  for (const it of items) {
+    const t = (str(it.name) + " " + noTicks(it.note)).toLowerCase();
+    if (words.some(w => t.includes(w)) && !words.every(w => noTicks(f.purpose).toLowerCase().includes(w))) return "in " + str(it.name) + (it.note ? ": " + it.note : "");
+  }
+  return "";
+}
+
+/* ---- all files ---- */
+let FS = {q: "", role: "", part: "", lang: ""};
+let TREE = {};
+function filesQuery() {
+  const p = new URLSearchParams();
+  ["q", "role", "part", "lang"].forEach(k => { if (FS[k]) p.set(k, FS[k]); });
+  const s = p.toString();
+  return "#/files" + (s ? "?" + s : "");
+}
+function viewFiles(query) {
+  FS = {q: query.get("q") || "", role: query.get("role") || "", part: query.get("part") || "", lang: query.get("lang") || ""};
+  const roles = countBy(D.paths, p => str(F(p).role)), partsC = countBy(D.paths, p => str(F(p).part)), langs = countBy(D.paths, p => str(F(p).lang));
+  const chips = (key, entries, label) => entries.length < 2 && !FS[key] ? "" :
+    `<div class="chiprow"><span class="k">${label}</span>` + entries.map(([v, c, name]) =>
+      `<button type="button" class="chip" data-chip="${key}" data-val="${esc(v)}" aria-pressed="${FS[key] === v}">${name}<span class="c">${c}</span></button>`).join("") + `</div>`;
+  const roleE = Object.entries(roles).sort((a, b) => b[1] - a[1]).map(([v, c]) => [v, c, esc(roleEmoji(v) + " " + roleName(v))]);
+  const partE = D.parts.filter(p => partsC[p.id]).map(p => [p.id, partsC[p.id], `<span class="swatch" style="--pc:${esc(p.color)}"></span>${esc(p.name)}`]);
+  const langE = Object.entries(langs).sort((a, b) => b[1] - a[1]).map(([v, c]) => [v, c, esc(v)]);
+  return `<h1>All files</h1><div class="filters"><label class="small muted" for="fq">Search paths, purposes, function names and notes</label><br>` +
+    `<input id="fq" type="search" value="${esc(FS.q)}" placeholder="e.g. checkout, validate, retry" autocomplete="off">` +
+    `<div id="chips">${chips("role", roleE, "Role")}${chips("part", partE, "Part")}${chips("lang", langE, "Language")}</div></div>` +
+    `<div id="fres" aria-live="polite"></div>`;
+}
+function countBy(list, fn) { const o = {}; list.forEach(x => { const k = fn(x); o[k] = (o[k] || 0) + 1; }); return o; }
+function filteredPaths() {
+  const words = matchWords(FS.q);
+  let list = words.length ? buildIndex().filter(e => words.every(w => e.s.includes(w))).map(e => e.p) : D.paths;
+  if (FS.role) list = list.filter(p => str(F(p).role) === FS.role);
+  if (FS.part) list = list.filter(p => str(F(p).part) === FS.part);
+  if (FS.lang) list = list.filter(p => str(F(p).lang) === FS.lang);
+  return list;
+}
+function updateFilesResults() {
+  const list = filteredPaths(), words = matchWords(FS.q);
+  const box = $("#fres"); if (!box) return;
+  TREE = {}; treeSeq = 0;
+  let h = `<p class="muted small"><b>${fmt(list.length)}</b> of ${fmt(D.paths.length)} files` + (list.length ? "" : " match") + `</p>`;
+  if (!list.length) h += `<p class="empty">No files match. Clear a filter or change the search.</p>`;
+  else if (words.length && list.length <= 60) {
+    h += rowsBlockHits(list, words);
+  } else {
+    const root = {name: "", dirs: new Map(), files: []};
+    list.forEach(p => {
+      const segs = p.split("/"); let n = root;
+      for (let i = 0; i < segs.length - 1; i++) {
+        if (!n.dirs.has(segs[i])) n.dirs.set(segs[i], {name: segs[i], dirs: new Map(), files: []});
+        n = n.dirs.get(segs[i]);
+      }
+      n.files.push(p);
+    });
+    h += `<div class="tree">${treeHtml(root, list.length <= 120 || (words.length > 0 && list.length <= 300), true)}</div>`;
+  }
+  box.innerHTML = h;
+}
+function rowsBlockHits(list, words) {
+  return `<div class="rows">` + list.map(p => fileRow(p, {hit: hitHint(F(p), words)})).join("") + `</div>`;
+}
+let treeSeq = 0;
+function countFiles(n) { if (n._c == null) { let c = n.files.length; n.dirs.forEach(d => { c += countFiles(d); }); n._c = c; } return n._c; }
+function treeHtml(node, openAll, isRoot) {
+  let h = "";
+  const dirs = [...node.dirs.values()].sort((a, b) => a.name.localeCompare(b.name));
+  dirs.forEach(d => {
+    let name = d.name, cur = d;
+    while (cur.files.length === 0 && cur.dirs.size === 1) { cur = [...cur.dirs.values()][0]; name += "/" + cur.name; }
+    const id = "t" + (++treeSeq);
+    const open = openAll || (isRoot && dirs.length === 1);
+    TREE[id] = {node: cur, openAll};
+    h += `<details class="folder" data-tree="${id}"${open ? " open" : ""}><summary>${esc(name)}/ <span class="cnt">${plural(countFiles(cur), "file")}</span></summary><div class="inner">${open ? folderBody(id) : ""}</div></details>`;
+    if (open) TREE[id].built = true;
+  });
+  if (node.files.length) h += `<div class="tree-files">${rowsBlock(node.files.slice().sort(), 300, {base: true})}</div>`;
+  return h;
+}
+function folderBody(id) { const t = TREE[id]; return treeHtml(t.node, t.openAll, false); }
+
+/* ---- file view ---- */
+function viewFile(path) {
+  const f = F(path);
+  if (!f) return notFound("file", path);
+  const part = D.partById[f.part], prob = D.problemById[f.problem];
+  const srcUrl = sourceUrl(path, 0);
+  let h = `<div class="crumbs"><a href="#/">Home</a> / <a href="#/files">All files</a>${part ? " / " + partLink(f.part) : ""}</div>`;
+  h += `<div class="fhead"><h1 class="fpath">${esc(path)}</h1>${srcUrl ? `<a href="${esc(srcUrl)}" target="_blank" rel="noopener noreferrer">view source &#8599;</a>` : ""}</div>`;
+  h += `<div class="meta">${rolePill(str(f.role))}` +
+    (part ? `<a class="pill" href="${partHref(part.id)}"><span class="swatch" style="--pc:${esc(part.color)}"></span>${esc(part.name)}</a>` : "") +
+    (prob ? `<a class="pill" href="${partHref(prob.part)}#p-${esc(prob.id)}" data-problem="${esc(prob.id)}"><b>${esc(prob.id)}</b> ${pr(clip(prob.title, 60))}</a>` : "") +
+    `<span class="pill muted">${esc(str(f.lang) || "text")} &middot; ${fmt(f.lines)} lines</span></div>`;
+  if (f.purpose) h += `<p class="purpose-big">${pr(f.purpose)}</p>`;
+  const stories = arr(f.stories).filter(id => D.storyById[id]);
+  if (stories.length) h += `<div class="meta"><span class="small muted">Used in stories:</span>` + stories.map(id => `<a class="pill" href="${storyHref(id)}">${esc(D.storyById[id].title)}</a>`).join("") + `</div>`;
+
+  h += `<h2>Inside the file</h2>`;
+  const ol = f.outline && typeof f.outline === "object" ? f.outline : null;
+  const items = ol ? arr(ol.items) : [];
+  if (!ol) h += `<p class="empty">No outline is available for this kind of file.</p>`;
+  else {
+    const ids = {}; let n = 0;
+    (function reg(list) { list.forEach(it => { it = obj(it); const k = str(it.name); if (k && !(k in ids)) ids[k] = "it-" + (++n); reg(arr(it.children)); }); })(items);
+    const missing = countMissing(items);
+    if (missing && D.mode === "written") h += `<p><span class="miss">notes missing</span> <span class="small muted">${plural(missing, "item")} in this file ${missing === 1 ? "has" : "have"} no note.</span></p>`;
+    if (!items.length) h += `<p class="empty">Nothing to outline: no top-level functions or classes.</p>`;
+    else h += `<ul class="outline">${items.map(it => itemHtml(it, path, ids, false)).join("")}</ul>`;
+    const consts = arr(ol.consts);
+    if (consts.length) h += `<div class="sub-h">Constants</div><div class="consts">${consts.map(c => `<code>${esc(c)}</code>`).join("")}</div>`;
+  }
+
+  h += `<h2>Imports</h2><p class="muted small" style="margin-top:-.4rem">Other files in this repo that this file uses.</p>`;
+  const imps = arr(f.imports).map(obj).filter(i => i.file);
+  h += imps.length ? `<div class="imp">` + imps.map(i => {
+    const nm = arr(i.names);
+    return `<div class="imp-i">${fileInline(i.file)}${nm.length ? `<div class="names">${nm.map(x => `<code>${esc(x)}</code>`).join("")}</div>` : ""}</div>`;
+  }).join("") + `</div>` : `<p class="empty">Imports no other file in this repo.</p>`;
+
+  h += `<h2>Libraries</h2>`;
+  const libs = arr(f.libs);
+  h += libs.length ? `<div class="libs">${libs.map(l => `<code>${esc(l)}</code>`).join("")}</div>` : `<p class="empty">No outside libraries.</p>`;
+
+  h += `<h2>Used by</h2>`;
+  const ub = strs(f.used_by);
+  h += ub.length ? rowsBlock(ub, 150) : `<p class="empty">No other file imports this one.</p>`;
+  return h;
+}
+function fileInline(p) {
+  const f = F(p);
+  return `<a href="${fileHref(p)}"><span title="${esc(f ? roleName(f.role) : "")}">${esc(f ? roleEmoji(f.role) : "?")}</span> <span class="mono">${esc(p)}</span></a>` +
+    (f && f.purpose ? ` <span class="muted small">${pr(clip(f.purpose, 110))}</span>` : "");
+}
+function countMissing(items) {
+  let c = 0;
+  arr(items).forEach(it => { it = obj(it); if (!str(it.note).trim()) c++; arr(it.methods).forEach(m => { if (!str(obj(m).note).trim()) c++; }); c += countMissing(it.children); });
+  return c;
+}
+function lineLink(path, line) {
+  if (!line) return "";
+  const u = sourceUrl(path, line);
+  return `<span class="ln">${u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" title="View source at line ${esc(line)}">L${esc(line)}</a>` : "L" + esc(line)}</span>`;
+}
+function itemHtml(it, path, ids, isChild) {
+  it = obj(it);
+  const kind = str(it.kind) || "function";
+  const kcls = ["class", "function", "method", "table", "type", "const", "value"].includes(kind) ? kind : "other";
+  const glyph = {class: "C", function: "ƒ", method: "m", table: "▦", type: "T", const: "=", value: "v"}[kind] || kind.charAt(0).toUpperCase();
+  const id = ids[str(it.name)];
+  const sig = str(it.signature) && str(it.signature) !== str(it.name) ? `<code class="sig">${esc(it.signature)}</code>` : "";
+  let h = `<li class="item" ${id ? `id="${id}"` : ""}><div class="irow"><span class="kind k-${kcls}" title="${esc(kind)}" aria-label="${esc(kind)}">${esc(glyph)}</span><span class="nm">${esc(it.name)}</span>${sig}` +
+    (it.exported === false ? `<span class="priv" title="Not part of the public interface">private</span>` : "") + lineLink(path, it.line) + `</div>`;
+  h += noteHtml(it.note);
+  const calls = arr(it.calls).map(str).filter(Boolean);
+  if (calls.length) h += `<div class="calls">calls &rarr; ` + calls.map(c => ids[c] ? `<a data-goto="${ids[c]}" role="link" tabindex="0">${esc(c)}</a>` : `<code>${esc(c)}</code>`).join(" ") + `</div>`;
+  const methods = arr(it.methods).map(obj);
+  if (methods.length) h += `<ul class="methods">` + methods.map(m =>
+    `<li class="item"><div class="irow"><span class="kind k-method" title="method" aria-label="method">m</span><span class="nm">${esc(m.name)}</span>` +
+    (str(m.signature) && m.signature !== m.name ? `<code class="sig">${esc(m.signature)}</code>` : "") + lineLink(path, m.line) + `</div>${noteHtml(m.note)}</li>`).join("") + `</ul>`;
+  const kids = arr(it.children);
+  if (kids.length) h += `<ul>` + kids.map(k => itemHtml(k, path, ids, true)).join("") + `</ul>`;
+  return h + `</li>`;
+}
+function noteHtml(n) {
+  n = str(n).trim();
+  if (n) return `<div class="note">${pr(n)}</div>`;
+  return D.mode === "written" ? `<div class="note none">no note yet</div>` : "";
+}
+
+function viewWarnings() {
+  const paths = new Set(D.paths);
+  let h = `<h1>Warnings</h1>`;
+  if (!D.warnings.length) return h + `<p class="empty">No warnings. Everything in the written tour matches the code.</p>`;
+  h += `<p class="muted prose">The tour and the code disagree in these places. Fix them in <code>.repotour/</code> and build again.</p><ul class="warnlist">` +
+    D.warnings.map(w => `<li>${pr(w).replace(/[^\s'"(),:;]+/g, tok => { const raw = tok.replace(/&amp;/g, "&"); return paths.has(raw) ? `<a href="${fileHref(raw)}">${tok}</a>` : tok; })}</li>`).join("") + `</ul>`;
+  return h;
+}
+function notFound(kind, id) {
+  return `<h1>Not found</h1><p>There is no ${esc(kind)} called <code>${esc(id)}</code> in this tour.</p><p><a href="#/">Back to the home page</a></p>`;
+}
+
+/* ---------- router ---------- */
+function parseHash() {
+  let h = location.hash.replace(/^#/, "");
+  if (h.charAt(0) !== "/") h = "/" + h;
+  let query = "";
+  const qi = h.indexOf("?");
+  if (qi >= 0) { query = h.slice(qi + 1); h = h.slice(0, qi); }
+  // a #p-<id> anchor after a part route
+  const ai = h.indexOf("#");
+  let anchor = "";
+  if (ai >= 0) { anchor = h.slice(ai + 1); h = h.slice(0, ai); }
+  const segs = h.split("/").filter((s, i) => i > 0 || s !== "");
+  const dec = s => { try { return decodeURIComponent(s); } catch (e) { return s; } };
+  return {name: dec(segs[0] || ""), arg: segs.slice(1).map(dec).join("/"), query: new URLSearchParams(query), anchor};
+}
+let lastKey = "";
+function render() {
+  const r = parseHash();
+  const app = $("#main");
+  let html, title = D.project.name, nav = "home";
+  try {
+    switch (r.name) {
+      case "part": html = viewPart(r.arg); nav = "parts"; title = (D.partById[r.arg] || {}).name || "Part"; break;
+      case "parts": html = viewParts(); nav = "parts"; title = "Parts"; break;
+      case "story": html = viewStory(r.arg); nav = "stories"; title = (D.storyById[r.arg] || {}).title || "Story"; break;
+      case "stories": html = viewStories(); nav = "stories"; title = "Stories"; break;
+      case "file": html = viewFile(r.arg); nav = "files"; title = r.arg.split("/").pop(); break;
+      case "files": html = viewFiles(r.query); nav = "files"; title = "All files"; break;
+      case "warnings": html = viewWarnings(); nav = ""; title = "Warnings"; break;
+      default: html = viewHome();
+    }
+  } catch (e) {
+    console.error(e);
+    html = `<h1>Something went wrong</h1><p>This view could not be drawn: <code>${esc(e && e.message)}</code></p>`;
+  }
+  app.innerHTML = html;
+  document.title = (title === D.project.name ? title : title + " · " + D.project.name);
+  document.querySelectorAll("nav.main a").forEach(a => { if (a.dataset.nav === nav) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+  if (r.name === "files") updateFilesResults();
+  const key = r.name + "/" + r.arg;
+  if (r.anchor && $("#" + CSS.escape(r.anchor))) { $("#" + CSS.escape(r.anchor)).scrollIntoView(); }
+  else if (key !== lastKey || r.name !== "files") window.scrollTo(0, 0);
+  lastKey = key;
+  closeDd();
+}
+window.addEventListener("hashchange", render);
+
+/* ---------- events ---------- */
+function flash(id) {
+  const el = document.getElementById(id); if (!el) return;
+  el.scrollIntoView({block: "center", behavior: "smooth"});
+  el.classList.add("flash");
+  setTimeout(() => el.classList.remove("flash"), 1800);
+}
+function copyText(t, btn) {
+  const done = () => { const o = btn.textContent; btn.textContent = "Copied"; setTimeout(() => { btn.textContent = o; }, 1400); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done));
+  else fallbackCopy(t, done);
+}
+function fallbackCopy(t, done) {
+  const ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); done(); } catch (e) { /* ignore */ }
+  document.body.removeChild(ta);
+}
+$("#main").addEventListener("click", e => {
+  const t = e.target.closest("[data-goto],[data-copy],[data-more],[data-chip]");
+  if (!t) return;
+  if (t.dataset.goto) { e.preventDefault(); flash(t.dataset.goto); }
+  else if (t.dataset.copy != null) copyText(t.dataset.copy, t);
+  else if (t.dataset.more) {
+    const m = MORE[t.dataset.more]; if (!m) return;
+    const wrap = document.createElement("div"); wrap.innerHTML = m.paths.map(p => fileRow(p, m.opts)).join("");
+    const parent = t.parentNode; parent.removeChild(t);
+    while (wrap.firstChild) parent.appendChild(wrap.firstChild);
+    delete MORE[t.dataset.more];
+  } else if (t.dataset.chip) {
+    const k = t.dataset.chip, v = t.dataset.val;
+    FS[k] = FS[k] === v ? "" : v;
+    history.replaceState(null, "", filesQuery());
+    document.querySelectorAll('[data-chip="' + k + '"]').forEach(b => b.setAttribute("aria-pressed", String(FS[k] === b.dataset.val)));
+    updateFilesResults();
+  }
+});
+$("#main").addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.dataset && e.target.dataset.goto) { e.preventDefault(); flash(e.target.dataset.goto); }
+});
+$("#main").addEventListener("input", e => {
+  if (e.target.id !== "fq") return;
+  clearTimeout(fqTimer);
+  fqTimer = setTimeout(() => { FS.q = e.target.value; history.replaceState(null, "", filesQuery()); updateFilesResults(); }, 120);
+});
+let fqTimer = 0;
+$("#main").addEventListener("toggle", e => {
+  const d = e.target;
+  if (!d.dataset || !d.dataset.tree || !d.open) return;
+  const t = TREE[d.dataset.tree];
+  if (t && !t.built) { t.built = true; d.querySelector(".inner").innerHTML = folderBody(d.dataset.tree); }
+}, true);
+
+/* global search */
+const gs = $("#gsearch"), dd = $("#dd");
+let ddItems = [], ddSel = -1, gsTimer = 0;
+function closeDd() { dd.hidden = true; ddSel = -1; }
+function updateDd() {
+  const words = matchWords(gs.value);
+  if (!words.length) { closeDd(); return; }
+  const hit = s => words.every(w => s.toLowerCase().includes(w));
+  let h = "";
+  const ps = D.parts.filter(p => hit(p.name + " " + p.role)).slice(0, 3);
+  const ss = D.stories.filter(s => hit(s.title + " " + s.summary)).slice(0, 3);
+  const fs = buildIndex().filter(e => words.every(w => e.s.includes(w))).slice(0, 8);
+  const total = buildIndex().filter(e => words.every(w => e.s.includes(w))).length;
+  if (ps.length) h += `<div class="dd-h">Parts</div>` + ps.map(p => `<a class="dd-i" href="${partHref(p.id)}">${esc(p.name)}<span class="muted">${esc(clip(p.role, 50))}</span></a>`).join("");
+  if (ss.length) h += `<div class="dd-h">Stories</div>` + ss.map(s => `<a class="dd-i" href="${storyHref(s.id)}">${esc(s.title)}</a>`).join("");
+  if (fs.length) h += `<div class="dd-h">Files</div>` + fs.map(e => `<a class="dd-i" href="${fileHref(e.p)}">${esc(roleEmoji(F(e.p).role))} <span class="mono">${esc(e.p)}</span></a>`).join("");
+  h += `<a class="dd-i" href="#/files?q=${encodeURIComponent(gs.value.trim())}"><b>See all ${fmt(total)} matching files</b></a>`;
+  dd.innerHTML = h; dd.hidden = false;
+  ddItems = [...dd.querySelectorAll(".dd-i")]; ddSel = -1;
+}
+gs.addEventListener("input", () => { clearTimeout(gsTimer); gsTimer = setTimeout(updateDd, 100); });
+gs.addEventListener("keydown", e => {
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    if (dd.hidden) return;
+    e.preventDefault();
+    ddSel = (ddSel + (e.key === "ArrowDown" ? 1 : -1) + ddItems.length) % ddItems.length;
+    ddItems.forEach((a, i) => a.classList.toggle("sel", i === ddSel));
+    ddItems[ddSel].scrollIntoView({block: "nearest"});
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (ddSel >= 0 && ddItems[ddSel]) location.hash = ddItems[ddSel].getAttribute("href");
+    else if (gs.value.trim()) location.hash = "#/files?q=" + encodeURIComponent(gs.value.trim());
+    closeDd();
+  }
+});
+document.addEventListener("click", e => { if (!e.target.closest(".searchbox")) closeDd(); });
+document.addEventListener("keydown", e => {
+  const tag = (e.target.tagName || "").toLowerCase();
+  const typing = tag === "input" || tag === "textarea" || tag === "select" || e.target.isContentEditable;
+  if (e.key === "/" && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); gs.focus(); gs.select(); }
+  else if (e.key === "Escape") {
+    if (gs.value || document.activeElement === gs) { gs.value = ""; closeDd(); gs.blur(); }
+    else if (document.activeElement && document.activeElement.id === "fq") { const q = document.activeElement; q.value = ""; FS.q = ""; history.replaceState(null, "", filesQuery()); updateFilesResults(); }
+  }
+});
+
+/* theme */
+const root = document.documentElement;
+function setTheme(t, save) {
+  root.setAttribute("data-theme", t);
+  const b = $("#theme"); b.textContent = t === "dark" ? "☀ Light" : "☾ Dark";
+  b.setAttribute("aria-pressed", String(t === "dark"));
+  if (save) { try { localStorage.setItem("repotour-theme", t); } catch (e) { /* file:// may block */ } }
+}
+(function initTheme() {
+  let t = null;
+  try { t = localStorage.getItem("repotour-theme"); } catch (e) { /* ignore */ }
+  if (t !== "dark" && t !== "light") t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  setTheme(t, false);
+})();
+$("#theme").addEventListener("click", () => setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark", true));
+
+/* chrome */
+(function initChrome() {
+  $("#brand").textContent = D.project.name;
+  if (D.warnings.length) { $("#warnbtn").hidden = false; $("#warncount").textContent = D.warnings.length; $("#warnbtn").setAttribute("aria-label", D.warnings.length + " warnings"); }
+  const t = D.tool, when = D.built_at ? " on " + esc(D.built_at) : "";
+  const name = /^https?:\/\//i.test(str(t.url)) ? `<a href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">${esc(t.name)}</a>` : esc(t.name);
+  $("#foot").innerHTML = `Built with ${name}${t.version ? " v" + esc(t.version) : ""}${when}.`;
+  if (!DATA) $("#main").innerHTML = `<h1>No data</h1><p>This is the empty template. Build a tour with <code>repotour build</code>.</p>`;
+})();
+if (DATA) render();
+</script>
+</body>
+</html>

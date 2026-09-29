@@ -1,0 +1,510 @@
+project:
+  name: Requests
+  tagline: A Python library that sends HTTP requests and returns the server's response as a Python object.
+  overview: >-
+    Calling `requests.get(url)` builds a request, sends it over a pooled
+    urllib3 connection and returns a `Response`. The same steps run when you
+    use a `Session`, which also keeps cookies and default settings between
+    calls.
+    Most of the code is one pipeline. `api.py` and `sessions.py` take the
+    call, `models.py` turns it into a `PreparedRequest`, `adapters.py` sends it
+    and builds the `Response`, and `sessions.py` follows redirects. `auth.py`,
+    `cookies.py` and `utils.py` support each stage.
+  repo_url: https://github.com/psf/requests
+  branch: main
+
+scan:
+  exclude: []
+
+parts:
+  - id: entry
+    name: Public entry points
+    role: The names a user imports and the checks that run on import
+    folders: [src/requests/api.py, src/requests/__init__.py, src/requests/__version__.py, src/requests/packages.py, src/requests/help.py]
+    summary: >-
+      `api.py` holds the one-call functions such as `requests.get`.
+      `__init__.py` re-exports the public names and checks the versions of
+      urllib3 and the character-detection library when the package is
+      imported. `packages.py` keeps the old `requests.packages.*` import paths
+      working, and `help.py` prints version details for bug reports.
+  - id: session
+    name: Sessions and redirects
+    role: Runs a request from start to finish and follows redirects
+    folders: [src/requests/sessions.py, src/requests/hooks.py]
+    summary: >-
+      `Session` merges its own settings with each call, prepares the request,
+      picks an adapter, sends the request and follows redirects. `hooks.py`
+      runs user callbacks on each response.
+  - id: messages
+    name: Requests, responses and errors
+    role: The objects that describe a request, a response and what can go wrong
+    folders: [src/requests/models.py, src/requests/exceptions.py, src/requests/status_codes.py, src/requests/structures.py, src/requests/_types.py]
+    summary: >-
+      `models.py` defines `Request`, `PreparedRequest` and `Response`.
+      `PreparedRequest` turns URL, params, headers, body, cookies and auth
+      into the exact values that are sent. `Response` reads the body and
+      decodes it. `exceptions.py` defines every error the library raises.
+      `structures.py` holds the case-insensitive header dictionary. `_types.py`
+      holds type hints.
+  - id: transport
+    name: Transport
+    role: Sends a prepared request over the network and returns a response
+    folders: [src/requests/adapters.py, src/requests/certs.py]
+    summary: >-
+      `HTTPAdapter` uses urllib3 connection pools to send requests, applies
+      TLS verification and proxy settings, converts urllib3 errors into
+      requests exceptions and builds the `Response`. `certs.py` names the
+      default CA bundle file.
+  - id: authstate
+    name: Authentication and cookies
+    role: Adds credentials to requests and keeps cookies between requests
+    folders: [src/requests/auth.py, src/requests/cookies.py]
+    summary: >-
+      `auth.py` has the Basic, Proxy and Digest authentication handlers.
+      `cookies.py` adapts the standard library cookie jar so it works with
+      requests and responses from this library, and gives the jar a dict-like
+      interface.
+  - id: support
+    name: Helpers and compatibility
+    role: Small functions and import shims used by every other part
+    folders: [src/requests/utils.py, src/requests/_internal_utils.py, src/requests/compat.py]
+    summary: >-
+      `utils.py` holds parsing, proxy, encoding and URL helpers. `compat.py`
+      picks the JSON library, the character-detection library and the
+      standard library names the rest of the code imports.
+      `_internal_utils.py` holds two string helpers that depend only on
+      `compat.py`.
+  - id: project
+    name: Tests, CI, docs and packaging
+    role: Everything outside `src/requests` that builds, tests and documents the library
+    folders: [tests/, .github/, docs/, pyproject.toml, setup.py, tox.ini, .pre-commit-config.yaml, .readthedocs.yaml]
+    summary: >-
+      Tests use pytest with a local socket server and a `httpbin` fixture.
+      GitHub Actions run tests, lint, type checks and security scans.
+      Packaging is in `pyproject.toml`, and Sphinx builds the documentation
+      from `docs/`.
+
+problems:
+  - id: E1
+    part: entry
+    title: A user wants to send one request without creating a session
+    without: >-
+      Every script would have to create a `Session`, call it and close it, so
+      a simple GET would take several lines and sockets would stay open
+      unless the caller closed them.
+    fix: >-
+      `api.py` defines `get`, `post`, `put`, `patch`, `delete`, `head`,
+      `options` and `request`. `request` opens a `Session` in a `with` block,
+      calls `Session.request` and closes the session on exit.
+    files: [src/requests/api.py]
+  - id: E2
+    part: entry
+    title: Importing the package must report incompatible dependencies and expose the public names
+    without: >-
+      A wrong urllib3 or chardet version would fail later with an obscure
+      error, and users would have to import each class from its own module.
+    fix: >-
+      `__init__.py` runs `check_compatibility` on import, emits a
+      `RequestsDependencyWarning` when versions are outside the supported
+      range, and re-exports `get`, `Session`, `Response`, `codes` and the main
+      exceptions. `__version__.py` holds the version and metadata.
+    files: [src/requests/__init__.py, src/requests/__version__.py]
+  - id: E3
+    part: entry
+    title: Old code imports urllib3 and idna through requests.packages
+    without: >-
+      Code written for older versions that does `from requests.packages import
+      urllib3` would raise `ImportError`.
+    fix: >-
+      `packages.py` imports `urllib3`, `idna` and the detected character
+      library, then registers each of their modules in `sys.modules` under a
+      `requests.packages.` name so both names refer to the same module
+      object.
+    files: [src/requests/packages.py]
+    tests: [tests/test_packages.py]
+  - id: E4
+    part: entry
+    title: A bug report needs the versions of Python, TLS and dependencies
+    without: >-
+      Maintainers would have to ask each reporter for their platform, OpenSSL
+      and library versions by hand.
+    fix: >-
+      `help.py` builds a dictionary of those versions in `info` and prints it
+      as JSON when run with `python -m requests.help`.
+    files: [src/requests/help.py]
+    tests: [tests/test_help.py]
+
+  - id: S1
+    part: session
+    title: Settings, cookies and connections must carry over from one request to the next
+    without: >-
+      Each call would need the same headers, auth, proxies and cookies passed
+      again, and every call would open a new connection.
+    fix: >-
+      `Session` in `sessions.py` holds default headers, auth, params,
+      proxies, hooks, `verify`, `cert`, a cookie jar and a map of adapters.
+      `Session.request` builds a `Request`, `prepare_request` merges session
+      and per-call values with `merge_setting`, and `send` picks an adapter
+      and sends. `resolve_redirects` in `SessionRedirectMixin` follows
+      redirects.
+    files: [src/requests/sessions.py]
+    tests: [tests/test_requests.py]
+  - id: S2
+    part: session
+    title: A user wants to run code on each response
+    without: >-
+      Logging, timing or rewriting a response would need a wrapper around
+      every call.
+    fix: >-
+      `hooks.py` keeps the list of event names (only `response` exists) and
+      `dispatch_hook` calls each registered function with the response. A hook
+      that returns a value replaces the response.
+    files: [src/requests/hooks.py]
+    tests: [tests/test_hooks.py]
+
+  - id: M1
+    part: messages
+    title: Python arguments must become the exact URL, headers and body that go on the wire
+    without: >-
+      Each caller would have to encode query strings, form data, JSON and
+      multipart files by hand and set `Content-Length` and `Content-Type`.
+    fix: >-
+      `Request` in `models.py` holds what the user passed. `PreparedRequest`
+      runs `prepare_method`, `prepare_url`, `prepare_headers`,
+      `prepare_cookies`, `prepare_body`, `prepare_auth` and `prepare_hooks`.
+      `Response` holds the status, headers and body and decodes the body on
+      request.
+    files: [src/requests/models.py]
+  - id: M2
+    part: messages
+    title: Callers need to tell different failures apart
+    without: >-
+      Every failure would raise the same error, so code could not retry a
+      timeout differently from a bad URL.
+    fix: >-
+      `exceptions.py` defines `RequestException` and a subclass for each
+      failure: connection, timeout, SSL, bad URL, too many redirects, bad JSON
+      and others. It also defines the warnings the library emits.
+    files: [src/requests/exceptions.py]
+  - id: M3
+    part: messages
+    title: Status codes are hard to read as bare numbers
+    without: >-
+      Code would compare against literals such as 307 with no name to explain
+      them.
+    fix: >-
+      `status_codes.py` fills a `LookupDict` called `codes` with names such as
+      `codes.ok` and `codes.temporary_redirect`, in lower and upper case.
+    files: [src/requests/status_codes.py]
+  - id: M4
+    part: messages
+    title: Header names arrive in any capitalisation
+    without: >-
+      `headers['content-type']` would fail when the server sent
+      `Content-Type`.
+    fix: >-
+      `structures.py` defines `CaseInsensitiveDict`, which stores each key in
+      lower case for lookup and keeps the original spelling for display.
+      `LookupDict` gives dictionary values attribute access for `codes`.
+    files: [src/requests/structures.py]
+    tests: [tests/test_structures.py]
+  - id: M5
+    part: messages
+    title: Type checkers need names for the many accepted argument shapes
+    without: >-
+      Each signature would repeat long unions for data, params, files and
+      auth.
+    fix: >-
+      `_types.py` defines type aliases and `TypedDict` classes for keyword
+      arguments, and two small runtime helpers, `has_read` and `is_prepared`.
+      It is internal.
+    files: [src/requests/_types.py]
+
+  - id: T1
+    part: transport
+    title: A prepared request must be sent over a reused, verified connection
+    without: >-
+      Every request would open a new TCP and TLS connection, and proxy,
+      certificate and timeout settings would have to be applied by the caller.
+    fix: >-
+      `HTTPAdapter` in `adapters.py` keeps a urllib3 `PoolManager`. `send`
+      gets a connection, verifies TLS, sends the request and builds the
+      `Response`. It converts urllib3 exceptions into requests exceptions.
+      `BaseAdapter` defines the interface for custom adapters.
+    files: [src/requests/adapters.py]
+    tests: [tests/test_adapters.py, tests/test_lowlevel.py]
+  - id: T2
+    part: transport
+    title: HTTPS needs a default set of trusted certificate authorities
+    without: >-
+      Every HTTPS call would fail verification unless the caller supplied a CA
+      file.
+    fix: >-
+      `certs.py` returns the path of the `certifi` bundle from `where()`.
+      `utils.py` stores it as `DEFAULT_CA_BUNDLE_PATH`.
+    files: [src/requests/certs.py]
+
+  - id: A1
+    part: authstate
+    title: A server asks for a username and password
+    without: >-
+      Callers would compute the `Authorization` header themselves, including
+      the Digest challenge and response.
+    fix: >-
+      `auth.py` defines `HTTPBasicAuth`, `HTTPProxyAuth` and `HTTPDigestAuth`.
+      Basic sets a header. Digest registers a response hook that answers a
+      401 challenge and resends the request.
+    files: [src/requests/auth.py]
+  - id: A2
+    part: authstate
+    title: Cookies from a response must be sent back on later requests
+    without: >-
+      Login sessions would not work, because the cookie set by the server
+      would be dropped after each response.
+    fix: >-
+      `cookies.py` wraps requests and responses in `MockRequest` and
+      `MockResponse` so `http.cookiejar` can read them. `RequestsCookieJar`
+      adds dict-like access. `extract_cookies_to_jar` stores cookies and
+      `get_cookie_header` builds the `Cookie` header.
+    files: [src/requests/cookies.py]
+
+  - id: U1
+    part: support
+    title: The same small conversions are needed in many places
+    without: >-
+      Header parsing, proxy matching, URL re-quoting and encoding detection
+      would be copied into each module that needs them.
+    fix: >-
+      `utils.py` holds these as separate functions. `models.py`,
+      `sessions.py`, `adapters.py`, `auth.py` and `cookies.py` import them.
+    files: [src/requests/utils.py]
+    tests: [tests/test_utils.py]
+  - id: U2
+    part: support
+    title: Low-level string checks are needed without circular imports
+    without: >-
+      `models.py` and `auth.py` would need to import `utils.py` for two tiny
+      functions and header regexes, which imports `models.py` back.
+    fix: >-
+      `_internal_utils.py` holds `to_native_string`, `unicode_is_ascii` and
+      the header validation regexes, and imports only `compat.py`.
+    files: [src/requests/_internal_utils.py]
+  - id: U3
+    part: support
+    title: The library must run with different JSON and character-detection packages
+    without: >-
+      Each module would need its own try/except imports for `simplejson`,
+      `chardet` and `charset_normalizer`.
+    fix: >-
+      `compat.py` chooses `simplejson` if installed, otherwise `json`, and
+      chooses `chardet` or `charset_normalizer`. It re-exports standard
+      library names and keeps Python 2 flags (`is_py2`, `is_py3`) and aliases
+      for old callers.
+    files: [src/requests/compat.py]
+
+  - id: P1
+    part: project
+    title: Tests need a local server and shared fixtures
+    without: >-
+      Low-level tests such as chunked uploads or bad responses would depend on
+      the internet or on a real server that cannot be made to misbehave.
+    fix: >-
+      `tests/testserver/server.py` defines `Server` and `TLSServer`, threads
+      that accept a socket and run a handler function. `tests/conftest.py`
+      clears proxy environment variables before every test and wraps the
+      `httpbin` fixtures.
+    files: [tests/conftest.py, "tests/testserver/*.py", tests/utils.py, tests/compat.py, tests/__init__.py]
+    tests: [tests/test_testserver.py]
+  - id: P2
+    part: project
+    title: Every change must be tested, linted and scanned before merge
+    without: >-
+      A change could break a Python version, an operating system, type
+      checking or the release process without anyone seeing it.
+    fix: >-
+      Workflows in `.github/workflows/` run tests on several Python versions
+      and operating systems, lint through `pre-commit`, run `pyright`, run
+      CodeQL and `zizmor`, close and lock issues, and publish to PyPI on a
+      `v*` tag. `tox.ini` runs the tests locally. `dependabot.yml` updates
+      action and hook versions.
+    files: [".github/workflows/*.yml", .github/dependabot.yml, .pre-commit-config.yaml, tox.ini]
+  - id: P3
+    part: project
+    title: The library must be installable and documented
+    without: >-
+      There would be no package metadata to install from and no published
+      documentation.
+    fix: >-
+      `pyproject.toml` defines the package, dependencies, ruff, pytest and
+      pyright settings. `setup.py` stops installation on Python older than
+      3.10. `docs/conf.py` configures Sphinx and `.readthedocs.yaml` builds it.
+    files: [pyproject.toml, setup.py, .readthedocs.yaml, docs/conf.py, "docs/_themes/*.py", .github/FUNDING.yml]
+
+stories:
+  - id: S1
+    act: "Act 1: Send a request"
+    title: A script calls requests.get and reads the response
+    command: python -c "import requests; print(requests.get('https://httpbin.org/get').json())"
+    summary: >-
+      The call builds a request, prepares it, sends it through an adapter and
+      returns a `Response` whose body is already read.
+    steps:
+      - text: "`requests.get` calls `request('get', ...)`. `request` opens a `Session` in a `with` block and calls `Session.request`."
+        files: [src/requests/api.py]
+      - text: "`Session.request` builds a `Request` and calls `prepare_request`, which merges cookies, headers, params and auth from the session and the call. If neither has auth and `trust_env` is on, it looks up netrc credentials."
+        files: [src/requests/sessions.py, src/requests/utils.py]
+      - text: "`PreparedRequest.prepare` runs method, URL, headers, cookies, body, auth and hooks in that order. `prepare_url` checks the scheme and host and encodes params. `prepare_cookies` sets the `Cookie` header."
+        files: [src/requests/models.py, src/requests/cookies.py]
+      - text: "`merge_environment_settings` adds proxies from environment variables and a CA bundle from `REQUESTS_CA_BUNDLE` or `CURL_CA_BUNDLE`. `Session.send` then picks the adapter whose prefix matches the URL."
+        files: [src/requests/sessions.py]
+      - text: "`HTTPAdapter.send` gets a pooled connection, checks the certificate settings, builds the timeout and calls urllib3's `urlopen`. `build_response` wraps the result in a `Response` and stores its cookies."
+        files: [src/requests/adapters.py, src/requests/cookies.py]
+      - text: "Back in `Session.send`, the response hooks run, cookies are saved to the session jar and redirects are resolved. Unless `stream` is set, it reads `r.content` before returning."
+        files: [src/requests/sessions.py, src/requests/hooks.py, src/requests/models.py]
+  - id: S2
+    act: "Act 1: Send a request"
+    title: The server answers with a redirect
+    command: python -c "import requests; r = requests.get('https://httpbin.org/redirect/2'); print(r.history)"
+    summary: >-
+      `resolve_redirects` rebuilds the request for each hop until a response
+      is not a redirect, or raises after too many.
+    steps:
+      - text: "`Session.send` calls `resolve_redirects` when `allow_redirects` is true. `get_redirect_target` reads the `Location` header if `Response.is_redirect` is true."
+        files: [src/requests/sessions.py, src/requests/models.py]
+      - text: "Each hop reads and closes the previous response, raises `TooManyRedirects` after `max_redirects` (30 by default), and joins a relative `Location` to the current URL with `requote_uri`."
+        files: [src/requests/sessions.py, src/requests/utils.py, src/requests/exceptions.py]
+      - text: "`rebuild_method` changes the method to GET for 303 and 302 (unless the method is HEAD) and for POST after 301. For anything other than 307 or 308 the body and its headers are dropped."
+        files: [src/requests/sessions.py]
+      - text: "`rebuild_auth` removes `Authorization` when `should_strip_auth` says the host, scheme or port changed. `rebuild_proxies` recomputes proxies for the new URL. If the body is a file, `rewind_body` moves it back to its start."
+        files: [src/requests/sessions.py, src/requests/utils.py]
+      - text: "The new request is sent with `allow_redirects=False`, so each hop is handled by this loop, and the responses are stored in `history`."
+        files: [src/requests/sessions.py, src/requests/adapters.py]
+  - id: S3
+    act: "Act 1: Send a request"
+    title: A script posts JSON, then a file
+    command: >-
+      python -c "import requests; requests.post('https://httpbin.org/post', json={'a': 1}); requests.post('https://httpbin.org/post', files={'f': open('x.txt', 'rb')})"
+    summary: >-
+      `prepare_body` picks the body format from the arguments and sets the
+      `Content-Type` and `Content-Length` headers.
+    steps:
+      - text: "`Session.request` passes `data`, `files` and `json` to `Request`, and `PreparedRequest.prepare` passes them to `prepare_body`."
+        files: [src/requests/sessions.py, src/requests/models.py]
+      - text: "With `json` and no `data`, `prepare_body` serialises it with `dumps(..., allow_nan=False)`, encodes it as UTF-8 and sets `Content-Type: application/json`. NaN raises `InvalidJSONError`."
+        files: [src/requests/models.py, src/requests/compat.py]
+      - text: "With `files`, `_encode_files` reads each file (guessing the file name with `guess_filename`) and builds a multipart body with urllib3. Streamed bodies and `files` together raise `NotImplementedError`."
+        files: [src/requests/models.py, src/requests/utils.py]
+      - text: "For bytes, strings and form data, `prepare_content_length` uses `super_len` to set `Content-Length`. For a file or generator body, `prepare_body` itself sets `Content-Length` if `super_len` finds a length and `Transfer-Encoding: chunked` if not."
+        files: [src/requests/models.py, src/requests/utils.py]
+  - id: S4
+    act: "Act 2: Failures and streaming"
+    title: A request fails because the server is unreachable or answers 4xx or 5xx
+    command: python -c "import requests; requests.get('http://localhost:1/', timeout=1)"
+    summary: >-
+      Network failures are raised as requests exceptions by the adapter.
+      Error status codes raise only when the caller asks with `raise_for_status`.
+    steps:
+      - text: "`HTTPAdapter.send` catches urllib3 errors. A connect timeout becomes `ConnectTimeout`, a proxy error `ProxyError`, an SSL error `SSLError`, a read timeout `ReadTimeout`, and other connection failures `ConnectionError`."
+        files: [src/requests/adapters.py, src/requests/exceptions.py]
+      - text: "All of them derive from `RequestException`, which stores the `request` and `response` given to it."
+        files: [src/requests/exceptions.py]
+      - text: "A response with status 404 or 500 is returned normally. `Response.raise_for_status` raises `HTTPError` for 400-499 and 500-599. `Response.ok` calls it and returns False if it raised."
+        files: [src/requests/models.py, src/requests/exceptions.py]
+  - id: S5
+    act: "Act 2: Failures and streaming"
+    title: A script downloads a large file in chunks
+    command: python -c "import requests; r = requests.get(url, stream=True); [len(c) for c in r.iter_content(8192)]"
+    summary: >-
+      With `stream=True` the body is not read in `Session.send`. `iter_content`
+      reads it when the caller asks.
+    steps:
+      - text: "`Session.send` skips the `r.content` read when `stream` is true, so the adapter's urllib3 response stays open."
+        files: [src/requests/sessions.py, src/requests/adapters.py]
+      - text: "`Response.iter_content` reads from `raw.stream` in chunks and turns urllib3 decoding, protocol, timeout and SSL errors into `ChunkedEncodingError`, `ContentDecodingError`, `ConnectionError` and `SSLError`."
+        files: [src/requests/models.py, src/requests/exceptions.py]
+      - text: "With `decode_unicode=True`, `stream_decode_response_unicode` decodes each chunk using `Response.encoding`. If a caller reads the stream a second time, `StreamConsumedError` is raised."
+        files: [src/requests/utils.py, src/requests/models.py]
+  - id: S6
+    act: "Act 2: Failures and streaming"
+    title: A request goes through an HTTP proxy from an environment variable
+    command: HTTPS_PROXY=http://user:pw@proxy.example:3128 python -c "import requests; requests.get('https://httpbin.org/get')"
+    summary: >-
+      Proxy settings come from the environment and the call, and the adapter
+      connects through a proxy manager when one matches.
+    steps:
+      - text: "`merge_environment_settings` calls `get_environ_proxies`, which returns nothing when `should_bypass_proxies` matches `no_proxy`. Otherwise it returns the standard library's `getproxies()`."
+        files: [src/requests/sessions.py, src/requests/utils.py]
+      - text: "`Session.send` calls `resolve_proxies` when the call did not pass proxies. `HTTPAdapter.get_connection_with_tls_context` then uses `select_proxy` to choose a proxy by scheme and host, or `all`."
+        files: [src/requests/sessions.py, src/requests/adapters.py, src/requests/utils.py]
+      - text: "`get_connection_with_tls_context` calls `proxy_manager_for`. For a `socks` proxy it uses `SOCKSProxyManager`, otherwise it uses `proxy_from_url` with a `Proxy-Authorization` header built by `proxy_headers` from the credentials in the URL."
+        files: [src/requests/adapters.py, src/requests/auth.py, src/requests/utils.py]
+      - text: "`request_url` sends the full URL (without credentials or fragment) for an HTTP request through a non-SOCKS proxy, and only the path otherwise."
+        files: [src/requests/adapters.py, src/requests/utils.py]
+  - id: S7
+    act: "Act 3: Authentication and extension"
+    title: A script authenticates with HTTP Digest
+    command: python -c "import requests; from requests.auth import HTTPDigestAuth; requests.get(url, auth=HTTPDigestAuth('user', 'pw'))"
+    summary: >-
+      The first request goes out without credentials. A response hook reads
+      the 401 challenge and resends the request with a Digest header.
+    steps:
+      - text: "`PreparedRequest.prepare_auth` calls the auth object. A `(user, pass)` tuple is first wrapped in `HTTPBasicAuth`."
+        files: [src/requests/models.py, src/requests/auth.py]
+      - text: "`HTTPDigestAuth.__call__` resets per-thread state, adds a Digest header only if it already has a nonce from an earlier response, remembers the body position and registers `handle_401` and `handle_redirect` as response hooks."
+        files: [src/requests/auth.py]
+      - text: "After sending, `Session.send` calls `dispatch_hook`, which calls `handle_401`."
+        files: [src/requests/sessions.py, src/requests/hooks.py]
+      - text: "If the status is 400-499, `WWW-Authenticate` names digest and fewer than two attempts were made, `handle_401` parses the challenge with `parse_dict_header`, calls `build_digest_header`, copies the request, adds the header and sends it again with `r.connection.send`."
+        files: [src/requests/auth.py, src/requests/utils.py, src/requests/adapters.py]
+  - id: S8
+    act: "Act 3: Authentication and extension"
+    title: A developer mounts a custom transport adapter
+    command: >-
+      python -c "import requests; s = requests.Session(); s.mount('https://', requests.adapters.HTTPAdapter(max_retries=3))"
+    summary: >-
+      `Session.mount` maps a URL prefix to an adapter. `get_adapter` picks the
+      adapter for each request.
+    steps:
+      - text: "`Session.__init__` mounts an `HTTPAdapter` for `https://` and `http://`. `mount` stores an adapter under a prefix and re-orders the map so longer prefixes are checked first."
+        files: [src/requests/sessions.py]
+      - text: "`HTTPAdapter(max_retries=3)` turns the integer into a urllib3 `Retry` with `Retry.from_int`. With the default of 0 it uses `Retry(0, read=False)`, so nothing is retried."
+        files: [src/requests/adapters.py]
+      - text: "`Session.get_adapter` returns the first adapter whose prefix starts the URL, or raises `InvalidSchema`. A subclass of `BaseAdapter` only has to implement `send` and `close`."
+        files: [src/requests/sessions.py, src/requests/adapters.py]
+  - id: S9
+    act: "Act 3: Authentication and extension"
+    title: A contributor writes a test against a misbehaving server
+    command: pytest tests/test_lowlevel.py
+    summary: >-
+      A test starts a `Server` with a handler function that writes raw bytes,
+      then calls `requests` against it.
+    steps:
+      - text: "`Server` is a thread that binds to a free port, accepts the given number of connections and passes each socket to its handler. It is a context manager that yields `(host, port)`."
+        files: [tests/testserver/server.py]
+      - text: "The test writes a handler that sends a fixed byte string (for example an incomplete chunked response), enters the server and calls `requests.get` on its URL."
+        files: [tests/test_lowlevel.py, tests/testserver/server.py]
+      - text: "The library sees a normal socket. The assertion checks the exception or the request the handler received, for example `ChunkedEncodingError`."
+        files: [tests/test_lowlevel.py, src/requests/adapters.py, src/requests/models.py]
+
+guide:
+  - text: Start with the map. The library is one pipeline plus support code.
+  - story: S1
+    text: the main path, from `requests.get` to a `Response`. Every other story is a variation of it.
+  - part: entry
+    text: the functions and names a user imports.
+  - part: session
+    text: where settings are merged and redirects are followed.
+  - part: messages
+    text: how arguments become a request and how a response is read.
+  - part: transport
+    text: the code that touches urllib3 and the network.
+  - story: S2
+    text: how redirects change the request.
+  - story: S4
+    text: which exceptions are raised for which failures.
+  - part: authstate
+    text: credentials and cookies.
+  - part: support
+    text: helpers used by all of the above.
+  - story: S9
+    text: how the tests are written, if you are contributing.

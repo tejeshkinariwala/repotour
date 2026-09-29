@@ -1,0 +1,16 @@
+{
+  "name": "repotour",
+  "description": "RepoTour: write and build a readable HTML tour of a code repository.",
+  "owner": {
+    "name": "Tejesh Kinariwala"
+  },
+  "plugins": [
+    {
+      "name": "repotour",
+      "source": "./",
+      "description": "The /repotour skill. Writes .repotour/tour.yaml and notes.yaml, then builds the HTML tour with the repotour CLI.",
+      "category": "documentation",
+      "tags": ["documentation", "onboarding", "codebase"]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "repotour",
+  "displayName": "RepoTour",
+  "version": "0.1.0",
+  "description": "Turns a code repo into a readable single-file HTML tour: parts, problems, user stories, file roles and one-line notes.",
+  "author": {
+    "name": "Tejesh Kinariwala"
+  },
+  "homepage": "https://github.com/tejeshkinariwala/repotour",
+  "repository": "https://github.com/tejeshkinariwala/repotour",
+  "license": "MIT",
+  "keywords": ["documentation", "onboarding", "codebase", "architecture"]
+}

@@ -1,0 +1,221 @@
+src/vanilla.ts:
+  _file: "The core store, with no React dependency: createStore plus the types for stores and middleware."
+  SetStateInternal: "Types `setState` as two overloads: merge a partial state (or updater function), or replace the whole state when `replace` is true."
+  StoreApi: Describes a store, with `setState`, `getState`, `getInitialState` and `subscribe`.
+  ExtractState: Returns the state type of a store type by reading its `getState` return type.
+  Get: Returns the type of key `K` on `T` when it exists, otherwise `F`.
+  Mutate: Applies a list of middleware type entries from `StoreMutators` to a store type, in order.
+  StateCreator: Types the function `(setState, getState, store) => state` that users and middleware pass to `create`.
+  StoreMutators: Empty interface that each middleware extends with `declare module` to describe how it changes the store type.
+  StoreMutatorIdentifier: Union of the keys added to `StoreMutators`, such as `'zustand/persist'`.
+  CreateStore: Types `createStore` as a function that takes an initializer, or takes nothing and returns one that does.
+  CreateStoreImpl: Types the internal implementation that takes an initializer and returns the store.
+  createStoreImpl: "Creates a store: builds `setState`, `getState`, `getInitialState` and `subscribe` around a listener set, then calls the initializer to get the initial state."
+  createStore: Creates a store from a state initializer and returns its api (`setState`, `getState`, `getInitialState`, `subscribe`); called with no argument it returns `createStoreImpl`, which is the curried form `createStore<T>()(initializer)`.
+
+src/index.ts:
+  _file: Package entry point that re-exports the core, the React hook and every middleware except `immer`.
+
+src/react.ts:
+  _file: "React bindings: the useStore hook and the create function that returns a store as a hook."
+  ReadonlyStoreApi: Store type without `setState`, which is all a hook needs.
+  identity: Returns its argument. Default selector for `useStore`.
+  useStore: Reads a store in a component through `React.useSyncExternalStore` and returns the selected slice.
+  UseBoundStore: Type of the hook that `create` returns, callable with or without a selector and carrying the store methods.
+  Create: Types `create` as a function that takes an initializer, or takes nothing and returns one that does.
+  createImpl: Creates the store, builds a hook that calls `useStore` on it, and copies the store methods onto the hook.
+  create: Creates a store with `createStore` and returns a hook that reads a selected slice through `useStore`, with the store methods copied onto it; called with no argument it returns `createImpl`, which is the curried form `create<T>()(initializer)`.
+
+src/traditional.ts:
+  _file: "React bindings that take an equality function, built on useSyncExternalStoreWithSelector."
+  ReadonlyStoreApi: Store type without `setState`, which is all a hook needs.
+  identity: Returns its argument. Default selector for `useStoreWithEqualityFn`.
+  useStoreWithEqualityFn: Reads a store through the `use-sync-external-store` shim, with an optional equality function for the selected slice.
+  UseBoundStoreWithEqualityFn: Type of the hook that `createWithEqualityFn` returns, which also accepts an equality function.
+  CreateWithEqualityFn: Types `createWithEqualityFn` as a function that takes an initializer and an optional default equality function, or takes nothing and returns one that does.
+  createWithEqualityFnImpl: Creates the store and a hook that passes each call's equality function, or the default one, to `useStoreWithEqualityFn`.
+  createWithEqualityFn: Creates a store with `createStore` and returns a hook that reads a selected slice through `useStoreWithEqualityFn`, using `defaultEqualityFn` when the call passes none; called with no argument it returns the curried form.
+
+src/shallow.ts:
+  _file: Entry point for `zustand/shallow`. Re-exports `shallow` and `useShallow`.
+
+src/react/shallow.ts:
+  _file: "Exports useShallow, a hook that keeps the previous selector result when it is shallow-equal to the new one."
+  useShallow: Wraps a selector so it returns the previous result when the new result is shallow-equal to it.
+
+src/vanilla/shallow.ts:
+  _file: "Exports shallow, a one-level equality check for primitives, arrays, Maps, Sets and plain objects."
+  isIterable: Returns true when the object has `Symbol.iterator`.
+  compareEntries: Returns true when two objects with `entries()` have the same size and `Object.is`-equal values for every key.
+  compareIterables: Returns true when two iterables yield `Object.is`-equal values in the same order and end together.
+  shallow: Returns true when two values are identical or have equal top-level entries, comparing Maps, Sets, other iterables and plain objects.
+  hasIterableEntries: Returns true if the value has an `entries` property, so `shallow` compares Maps and Sets by their entries; it checks only that the property exists.
+
+src/types.d.ts:
+  _file: "Type declaration for the optional import.meta.env object that the code reads."
+  ImportMeta: Adds an optional `env.MODE` string to `import.meta`, which `devtools` reads.
+
+src/middleware.ts:
+  _file: Entry point for `zustand/middleware`. Re-exports every middleware except `immer`, which has its own entry point.
+
+src/middleware/combine.ts:
+  _file: "Middleware that merges an initial state with the state returned by a creator function, so the state type is inferred."
+  Write: Returns `T` with the keys of `U` replaced by `U`.
+  combine: Returns an initializer that merges `initialState` with the object returned by `create`.
+
+src/middleware/ssrSafe.ts:
+  _file: "Experimental middleware that makes setState throw while rendering on the server."
+  ssrSafe: "Returns an initializer that, when `isSSR` is true, replaces `set` and `api.setState` with a function that throws."
+
+src/middleware/redux.ts:
+  _file: "Middleware that adds a dispatch function and a Redux-style reducer to a store."
+  Write: Returns `T` with the keys of `U` replaced by `U`.
+  Action: Shape of a Redux action, an object with a string `type`.
+  StoreRedux: Store fields added by `redux`, which are `dispatch` and the `dispatchFromDevtools` flag.
+  ReduxState: State field added by `redux`, which is `dispatch`.
+  WithRedux: Store type after `redux` has been applied.
+  Redux: Types the public `redux` function, which takes a reducer and an initial state.
+  ReduxImpl: Types the internal implementation of `redux`.
+  reduxImpl: "Returns an initializer that sets `api.dispatch` to run the reducer through `set`, sets `dispatchFromDevtools`, and returns the initial state plus `dispatch`."
+  redux: Middleware that takes a reducer and an initial state, adds `api.dispatch` and a `dispatch` state field that apply the reducer through `set` with the action as its name, and sets `dispatchFromDevtools` on the store.
+
+src/middleware/immer.ts:
+  _file: "Middleware that lets setState take an Immer recipe that mutates a draft of the state."
+  Immer: Types the public `immer` function.
+  Write: Returns `T` with the keys of `U` replaced by `U`.
+  SkipTwo: Returns a tuple type without its first two elements.
+  SetStateType: Returns the first parameter type of `setState` without function types.
+  WithImmer: Store type after `immer` has been applied.
+  StoreImmer: Store type whose `setState` also accepts a function that mutates an Immer draft.
+  ImmerImpl: Types the internal implementation of `immer`.
+  immerImpl: "Returns an initializer that replaces `store.setState` so function updaters run through Immer's `produce`."
+  immer: Middleware that replaces `store.setState` so a function updater is wrapped in Immer `produce` and can mutate a draft; other values pass through unchanged. It is exported only from `zustand/middleware/immer`.
+
+src/middleware/subscribeWithSelector.ts:
+  _file: "Middleware that adds a subscribe overload taking a selector and an optional equality function."
+  SubscribeWithSelector: Types the public `subscribeWithSelector` function.
+  Write: Returns `T` with the keys of `U` replaced by `U`.
+  WithSelectorSubscribe: Store type after `subscribeWithSelector` has been applied.
+  StoreSubscribeWithSelector: Type of `subscribe` with a second form that takes a selector, a listener and options.
+  SubscribeWithSelectorImpl: Types the internal implementation of `subscribeWithSelector`.
+  subscribeWithSelectorImpl: Returns an initializer that replaces `api.subscribe` with a version that calls the listener only when the selected slice changes.
+  subscribeWithSelector: Middleware that replaces `api.subscribe` with a version that also takes a selector, a listener and options (`equalityFn`, default `Object.is`, and `fireImmediately`); the listener runs only when the selected slice changes.
+
+src/middleware/persist.ts:
+  _file: "Middleware that saves state to a storage backend and restores it when the store is created, with versioning and migration."
+  StateStorage: Describes a string storage such as `localStorage`, with `getItem`, `setItem` and `removeItem`, which may be async.
+  StorageValue: The saved value, which is the state and an optional version number.
+  PersistStorage: Describes a storage that reads and writes `StorageValue` objects instead of strings.
+  JsonStorageOptions: Options for `createJSONStorage`, a `reviver` and a `replacer` for JSON.
+  createJSONStorage: Wraps a string storage so it reads and writes JSON, and returns `undefined` when `getStorage` throws.
+  PersistOptions: "Options for `persist`: `name`, `storage`, `partialize`, `onRehydrateStorage`, `version`, `migrate`, `merge` and `skipHydration`."
+  PersistListener: Type of a function called with the state around hydration.
+  StorePersist: Store fields added by `persist`, which are `setState` returning the storage result and a `persist` object with hydration methods.
+  Thenable: Minimal promise-like type with `then` and `catch`.
+  toThenable: Wraps a function so its result can be chained with `then` and `catch` whether it returns a value, a promise or throws.
+  persistImpl: Returns an initializer that saves state after each update, loads and migrates stored state on creation, and adds `api.persist`.
+  Persist: Types the public `persist` function.
+  Write: Returns `T` with the keys of `U` replaced by `U`.
+  WithPersist: Store type after `persist` has been applied.
+  PersistImpl: Types the internal implementation of `persist`.
+  persist: Middleware that saves the state to a storage after each update and, unless `skipHydration` is set, loads, migrates and merges the stored state when the store is created; it adds `api.persist` with `setOptions`, `getOptions`, `clearStorage`, `rehydrate`, `hasHydrated`, `onHydrate` and `onFinishHydration`.
+
+src/middleware/devtools.ts:
+  _file: "Middleware that connects a store to the Redux DevTools browser extension and handles its time-travel messages."
+  Config: Type of the options that the Redux DevTools extension `connect` accepts.
+  Message: Shape of a message received from the extension.
+  WithDispatch: Store shape that has `dispatch` and the `dispatchFromDevtools` flag.
+  shouldDispatchFromDevtools: Returns true when the store has `dispatchFromDevtools` set and `dispatch` is a function.
+  Cast: Returns `T` when it extends `U`, otherwise `U`.
+  Write: Returns `T` with the keys of `U` replaced by `U`.
+  TakeTwo: Returns the first two elements of a tuple type, using `undefined` for missing ones.
+  WithDevtools: Store type after `devtools` has been applied.
+  Action: An action given to `setState`, either a string or an object with a `type`.
+  StoreDevtools: Store fields added by `devtools`, which are a `setState` that takes an action name and a `devtools.cleanup` function.
+  DevtoolsOptions: "Options for `devtools`: the extension options plus `enabled`, `anonymousActionType` and `store`."
+  Devtools: Types the public `devtools` function.
+  DevtoolsImpl: Types the internal implementation of `devtools`.
+  NamedSet: Type of `setState` that also takes an action name or object.
+  Connection: Type of the connection object that the extension returns.
+  ConnectionName: Name of a connection, a string or `undefined`.
+  StoreName: Name of one store on a shared connection.
+  StoreInformation: Type of a store registered on a shared connection.
+  ConnectionInformation: A connection and the stores that share it, keyed by store name.
+  getTrackedConnectionState: Returns the current state of every store on the named shared connection, keyed by store name.
+  extractConnectionInformation: Opens a new connection, or reuses the shared one for the same name when a `store` option is given.
+  removeStoreFromTrackedConnections: Removes a store from its shared connection and drops the connection when it has no stores left.
+  findCallerName: Returns the name of the function that called `api.setState`, by parsing a stack trace, or `undefined`.
+  devtoolsImpl: Returns an initializer that sends each update to the extension as an action and applies extension commands such as jump, reset and import back to the store.
+  parseJsonThen: Parses a JSON string and calls `fn` with the result, or logs an error when parsing fails.
+  devtools: Middleware that, when `enabled` allows it and the Redux DevTools extension exists, sends an action and the state after each `setState` and applies extension messages (`JUMP_TO_STATE`, `ROLLBACK`, `RESET`, `IMPORT_STATE`, dispatched actions) to the store; otherwise it returns the initializer unchanged. It adds `api.devtools.cleanup`.
+
+rollup.config.mjs:
+  _file: "Rollup configuration that builds each entry point as ESM and CommonJS bundles and emits type declarations."
+  external: Returns true for imports that do not start with `.` or the filesystem root, so packages stay out of the bundle.
+  getEsbuild: Creates the esbuild plugin with target `es2018` and the repo's `tsconfig.json`.
+  createDeclarationConfig: Returns the Rollup config that writes only `.d.ts` files to the output folder.
+  createESMConfig: Returns the Rollup config that writes one ESM file, aliasing other entry points and replacing `import.meta.env?.MODE`.
+  createCommonJSConfig: Returns the Rollup config that writes one CommonJS file, replacing `import.meta.env?.MODE` with `process.env.NODE_ENV`.
+  default: Reads the `--config-<entry>` flag and returns the configs for that entry, with declarations only for `index`.
+  entries: Maps the `vanilla`, `react` and `shallow` source files to their public names such as `zustand/vanilla`; each config aliases every entry except the one being built, so the others stay external imports.
+
+tests/test-utils.ts:
+  ReplacedMap: Shape a Map takes after `replacer` turns it into JSON.
+  replacer: Turns a Map into `{ type, value }` for `JSON.stringify` and returns other values unchanged.
+  reviver: Turns a `{ type, value }` object back into a Map for `JSON.parse`.
+  isReplacedMap: Returns true when the value looks like a serialized Map.
+  sleep: Returns a promise that resolves after `ms` milliseconds.
+
+tests/persistSync.test.tsx:
+  _file: Tests `persist` with synchronous storages, covering hydration, migration, merge and storage options.
+  createPersistentStore: Creates an in-memory sync storage with spies on `getItem`, `setItem` and `removeItem`.
+
+tests/persistAsync.test.tsx:
+  _file: Tests `persist` with asynchronous storages, covering hydration timing, migration, and concurrent hydrations.
+  createPersistantStore: Creates an in-memory async storage that waits 10 ms per call, with spies on each method.
+  Deferred: Holds a promise and the function that resolves it.
+  deferred: Creates a promise that the test resolves by hand.
+
+tests/devtools.test.tsx:
+  _file: Tests `devtools` against a mock Redux DevTools extension, covering connections, action names, and messages from the extension.
+  TupleOfEqualLengthH: Builds a tuple of `T` with the same length as `Arr`.
+  TupleOfEqualLength: Returns a tuple type of `T` with the length of `Arr`, or `T[]` when the length is not fixed.
+  Connection: Mock connection that holds the extension callbacks and the mock API.
+  assertAllAreDefined: Throws when any array element is `undefined`.
+  getUnnamedConnectionApis: Returns the mock APIs for connections without a name, by connection id.
+  getUnnamedConnectionSubscribers: Returns the message callbacks for connections without a name, by connection id.
+  getKeyFromOptions: Returns the connection key, which is the name, or `name|testStore` when `testStore` is set.
+  extensionConnector: Mock extension whose `connect` records each connection so tests can inspect calls and send messages.
+  getNamedConnectionApis: Returns the mock connection API for each given connection name, and throws if any name has no connection.
+  getNamedConnectionSubscribers: Returns the one message callback registered for each given connection name, and throws if a name has no connection or does not have exactly one callback.
+
+tests/middlewareTypes.test.tsx:
+  _file: Type-level and runtime tests that stacked middleware keep the right store types.
+  CounterState: State type with `count` and `inc`.
+  ExampleStateCreator: Type of a sample middleware, used to test custom `StoreMutators` entries.
+  Write: Returns `T` with the keys of `U` replaced by `U`.
+  StoreModifyAllButSetState: Store type without `setState`, used to test a custom mutator.
+
+tests/types.test.tsx:
+  AssertEqual: Resolves to `true` when two types are mutually assignable, otherwise `never`.
+
+tests/basic.test.tsx:
+  CounterState: State type with `count` and `inc`.
+
+tests/vanilla/basic.test.ts:
+  CounterState: State type with `count` and `inc`.
+
+tests/ssr.test.tsx:
+  BearStoreState: State type with `bears`.
+  BearStoreAction: Action type with `increasePopulation`.
+  Counter: Component that shows `bears` and increases the count in an effect.
+eslint.config.mjs:
+  _file: "ESLint flat configuration: rule sets for TypeScript, imports, Vitest and jest-dom, and the ignored paths."
+package.json:
+  _file: "Package metadata, dev dependencies and the scripts that build, test, lint and format the project."
+pnpm-workspace.yaml:
+  _file: "pnpm settings that stop selected packages (esbuild, unrs-resolver) from running build scripts on install."
+tsconfig.json:
+  _file: "TypeScript compiler options and the files included in the project."
+vitest.config.mts:
+  _file: "Vitest configuration: jsdom environment, tests directory, setup file, coverage settings and module aliases for zustand imports."

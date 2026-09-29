@@ -1,0 +1,612 @@
+project:
+  name: RepoTour
+  tagline: Turns a code repository into a single-file HTML tour with parts, problems, user stories and one-line notes on every function.
+  overview: >-
+    RepoTour has two halves. The `repotour` command scans a repository, parses
+    Python and JavaScript/TypeScript files, reads `.repotour/tour.yaml` and
+    `.repotour/notes.yaml`, and writes `.repotour/tour.html`. A Claude Code skill
+    (`/repotour`) writes those two YAML files by calling the command.
+
+    This tour covers the Python engine, its tests and the project tooling. The
+    skill files, the HTML template, the README and other Markdown or HTML files
+    are not in the scan (the default scan reads only files with known code and
+    config suffixes), so they appear in the stories as text only.
+  repo_url: https://github.com/tejeshkinariwala/repotour
+  branch: main
+
+scan:
+  exclude: ["tests/fixtures/**", "examples/**"]
+
+parts:
+  - id: cli
+    name: Command line
+    role: Turns command-line arguments into calls on the engine
+    folders: [src/repotour/]
+    summary: >-
+      `repotour build`, `scan`, `check`, `init` and `install-skill` all start in
+      `cli.py`. `init_cmd.py` writes starter YAML files and `install.py` copies
+      the packaged skill. Each command returns an exit code: 0 ok, 1 warnings
+      (under `--strict` or `check`), 2 error.
+  - id: discover
+    name: File discovery
+    role: Decides which files are in the tour, what role each has, and which files import which
+    folders: []
+    summary: >-
+      `scan.py` lists files, `repo.py` parses each one and works out `used_by`,
+      `roles.py` gives each file a role, and `globs.py` matches the path patterns
+      used in `tour.yaml`.
+  - id: analyzers
+    name: File analyzers
+    role: Reads one source file and returns its header, outline, imports and libraries
+    folders: [src/repotour/analyzers/]
+    summary: >-
+      One analyzer per language family, chosen by file suffix. Python uses the
+      standard `ast` module. JavaScript and TypeScript use a small lexer plus
+      regular expressions, because no third-party parser is used. Other text
+      files get only a header comment and a line count.
+  - id: content
+    name: Written content
+    role: Loads tour.yaml and notes.yaml, places files under problems, and attaches notes
+    folders: []
+    summary: >-
+      `config.py` reads the two YAML files and raises errors that stop the
+      build. `layout.py` places every file under a part and a problem. `notes.py`
+      attaches one-line notes to outline items and reports missing or stale notes.
+  - id: output
+    name: Data model and HTML
+    role: Builds the JSON data model and writes it into the HTML template
+    folders: []
+    summary: >-
+      `build.py` runs the whole pipeline and returns one dictionary. `render.py`
+      puts that dictionary into `templates/tour.html` in place of a placeholder
+      and writes the file.
+  - id: project
+    name: Packaging and tooling
+    role: Packaging metadata, CI and helper scripts for maintainers
+    folders: [scripts/, .github/, .claude-plugin/]
+    summary: >-
+      `pyproject.toml` defines the package and the `repotour` command. The
+      plugin JSON files describe the skill for Claude Code. CI runs lint, tests
+      and a check that the packaged skill copy matches `skills/repotour`.
+      Scripts check for private terms, sync the skill copy and preview the template.
+
+problems:
+  - id: C1
+    part: cli
+    title: A user needs one command with several actions
+    without: >-
+      Each action would be a separate script with its own argument handling and
+      its own idea of what a failure is, and CI could not rely on exit codes.
+    fix: >-
+      `cli.py` defines the sub-commands with `argparse`, runs the right engine
+      functions, prints warnings to stderr and returns 0, 1 or 2.
+      `__main__.py` lets `python -m repotour` do the same. `__init__.py` holds the
+      version number that `--version` prints.
+    files: [src/repotour/cli.py, src/repotour/__main__.py, src/repotour/__init__.py]
+    tests: [tests/test_cli.py]
+  - id: C2
+    part: cli
+    title: A new repo has no tour.yaml to start from
+    without: >-
+      A user would have to write the YAML structure by hand and list every
+      outline item to give it a note.
+    fix: >-
+      `init_cmd.py` runs the scan, makes one part per top-level folder with a
+      TODO problem for each, and writes a `notes.yaml` with an empty note for
+      every outline item. It refuses to overwrite unless `--force` is given.
+    files: [src/repotour/init_cmd.py]
+  - id: C3
+    part: cli
+    title: Claude Code cannot use the skill until its folder is in a .claude folder
+    without: >-
+      Users would copy the skill folder from the package by hand and would not
+      know where.
+    fix: >-
+      `install.py` copies the skill folder shipped inside the package to
+      `PROJECT/.claude/skills/repotour` or to `~/.claude/skills/repotour`. It
+      refuses to touch an existing install unless `--force` is given, and then
+      removes the old folder (or the link itself, not its target) first.
+    files: [src/repotour/install.py]
+  - id: D1
+    part: discover
+    title: Which files belong in the tour?
+    without: >-
+      The tour would include dependency folders, lock files, minified bundles,
+      git-ignored files and files too big to parse.
+    fix: >-
+      `scan.py` asks `git ls-files` when the folder has a `.git`, otherwise walks
+      the folder. Folders such as `node_modules`, `.venv`, `__pycache__` and any
+      `*_cache` are skipped at any depth in both cases. Outside git it also skips
+      `build`, `dist`, `target`, `vendor`, `env` and `coverage`; in a git repo git
+      decides about those. It then drops lock files, `.min.js` and `.map` files,
+      symbolic links (with a warning), files over 1 MB (with a warning) and
+      anything outside the suffix list or the `scan` patterns from `tour.yaml`.
+    files: [src/repotour/scan.py]
+    tests: [tests/test_scan.py, tests/test_engine_fixes.py, tests/test_security.py]
+  - id: D2
+    part: discover
+    title: Every file must be parsed once and linked to the files that use it
+    without: >-
+      Each later step would re-read and re-parse files, and no file could say
+      which other files import it.
+    fix: >-
+      `repo.py` parses each scanned file once, stores the facts, assigns roles
+      and inverts the import lists into `used_by`.
+    files: [src/repotour/repo.py]
+  - id: D3
+    part: discover
+    title: A reader wants to know what kind of job a file does
+    without: >-
+      Every file would look the same in the tour, and the reader would have to
+      open each one to tell an entry point from a test.
+    fix: >-
+      `roles.py` holds the built-in roles and an ordered list of path rules; the
+      first match wins and rules from `tour.yaml` are tried first.
+    files: [src/repotour/roles.py]
+    tests: [tests/test_roles.py]
+  - id: D4
+    part: discover
+    title: Paths in tour.yaml are often patterns
+    without: >-
+      A folder of similar files would have to be listed one file at a time.
+    fix: >-
+      `globs.py` turns `*`, `?`, `[...]`, `**` and `{a,b}` patterns into regular
+      expressions and matches whole repo-relative paths.
+    files: [src/repotour/globs.py]
+    tests: [tests/test_globs.py]
+  - id: A1
+    part: analyzers
+    title: Every language must give the engine the same shape of facts
+    without: >-
+      The engine would need separate code for each language, and every new
+      language would change the engine.
+    fix: >-
+      `base.py` defines `FileFacts`, `Item` and `Context`. `__init__.py` holds
+      `LANGUAGES` (suffix to language name, which also gives the default scan
+      suffixes) and maps a file suffix to an analyzer. `generic.py` handles every
+      other text file and `headers.py` reads the leading comment used as the file
+      purpose, skipping directives and license banners.
+    files:
+      - src/repotour/analyzers/base.py
+      - src/repotour/analyzers/__init__.py
+      - src/repotour/analyzers/generic.py
+      - src/repotour/analyzers/headers.py
+    tests: [tests/conftest.py, tests/test_analyzers_fixes.py]
+  - id: A2
+    part: analyzers
+    title: A Python file must be summarised without running it
+    without: >-
+      Importing the file to inspect it would run its code, and the tour could
+      not link imports to files.
+    fix: >-
+      `python.py` parses the source with `ast`, lists functions, classes, methods
+      and function tables (also inside `if` and `try` blocks, with overloads shown
+      as their implementation), and resolves each import to a repo file or a
+      library. The header skips reST titles, ASCII art and copyright fields.
+    files: [src/repotour/analyzers/python.py]
+    tests: [tests/test_python_analyzer.py]
+  - id: A3
+    part: analyzers
+    title: JavaScript and TypeScript files need parsing with no parser installed
+    without: >-
+      Comments and strings would be read as code, so a commented-out function
+      or an import inside a string would show up in the outline.
+    fix: >-
+      `jslex.py` blanks comments and literals, `jsoutline.py` finds
+      declarations in the cleaned text (functions, classes, types, function
+      tables and exported values, with multi-line signatures on one line),
+      `jsresolve.py` resolves import paths (including `tsconfig.json` aliases,
+      the nearest config, `extends` and `include`/`exclude`) and `javascript.py`
+      runs the three.
+    files:
+      - src/repotour/analyzers/javascript.py
+      - src/repotour/analyzers/jslex.py
+      - src/repotour/analyzers/jsoutline.py
+      - src/repotour/analyzers/jsresolve.py
+    tests: [tests/test_javascript_analyzer.py]
+  - id: A4
+    part: analyzers
+    title: Small helper functions clutter the outline
+    without: >-
+      A file with many private helpers would list them all at the top level,
+      and the reader could not tell which function uses which.
+    fix: >-
+      `outline.py` nests a private helper under the one item that references it
+      and fills each item's `calls` list. Both language analyzers use it.
+    files: [src/repotour/analyzers/outline.py]
+  - id: T1
+    part: content
+    title: A mistake in the YAML must be reported with its location
+    without: >-
+      A typo in an id would surface later as a crash or a blank page, with no
+      hint about which key was wrong.
+    fix: >-
+      `config.py` parses both files and raises `ConfigError` with the file, the
+      key and the problem, for example `problems[0].part: unknown part 'nope'`.
+      It also warns about empty recommended fields (part name and summary,
+      problem title and fix, story title and steps) and part colours that are
+      not plain colour values, which are replaced by the palette.
+    files: [src/repotour/config.py]
+  - id: T2
+    part: content
+    title: Every file must sit under exactly one problem
+    without: >-
+      Files could be missing from the tour or shown twice, and new files added
+      after the tour was written would go unnoticed.
+    fix: >-
+      `layout.py` expands the file patterns of each problem, warns about
+      patterns that match nothing and files listed twice, and puts unlisted
+      files under a "Not yet placed" problem in the part whose folder fits best.
+      In auto mode it makes one placeholder problem per top-level folder.
+    files: [src/repotour/layout.py]
+  - id: T3
+    part: content
+    title: Notes must stay in step with the code
+    without: >-
+      A renamed function would keep its old note and a new function would have
+      none, and nobody would be told.
+    fix: >-
+      `notes.py` attaches each note to the outline item with the same key and
+      warns about missing notes, notes for names that no longer exist, and notes
+      for files that are missing or have no outline. When `tour.yaml` exists,
+      `coverage_warnings` also warns about each non-test file that has outline
+      items and no entry in `notes.yaml`.
+    files: [src/repotour/notes.py]
+  - id: B1
+    part: output
+    title: The page needs all the facts in one object
+    without: >-
+      The template would have to call the scanner, the analyzers and the YAML
+      loader itself.
+    fix: >-
+      `build.py` runs the pipeline and returns one dictionary with project,
+      stats, parts, problems, stories, files and warnings. It also resolves story
+      step patterns to files and counts imports between parts.
+    files: [src/repotour/build.py]
+    tests: [tests/test_build.py]
+  - id: B2
+    part: output
+    title: The tour must open as one file with no server
+    without: >-
+      The page would need a web server or several files kept next to each other.
+    fix: >-
+      `render.py` loads `templates/tour.html`, replaces the
+      `/*REPOTOUR_DATA*/null` placeholder with the JSON and writes the result.
+      It writes every `<` in the JSON as `\u003c` so text in the data cannot end the script tag.
+    files: [src/repotour/render.py]
+    tests: [tests/test_template.py]
+  - id: P1
+    part: project
+    title: The package and the skill must be installable
+    without: >-
+      `pip install` would not create the `repotour` command or ship the
+      template and the skill, and Claude Code could not find the plugin.
+    fix: >-
+      `pyproject.toml` names the package, the dependency (PyYAML) and the
+      `repotour` entry point. The two JSON files in `.claude-plugin/` describe the
+      plugin and its marketplace entry.
+    files: [pyproject.toml, ".claude-plugin/*.json"]
+  - id: P2
+    part: project
+    title: Contributors need automatic checks
+    without: >-
+      Lint errors, failing tests, an out-of-date packaged skill or a private
+      term in a commit could reach the main branch.
+    fix: >-
+      `ci.yml` runs ruff, the tests and `sync_skill.py --check` on four Python
+      versions. `sync_skill.py` copies `skills/repotour` into the package.
+      `leak_check.py` reports lines that contain terms from a private denylist
+      and can install itself as a pre-commit hook.
+    files: [.github/workflows/ci.yml, scripts/sync_skill.py, scripts/leak_check.py]
+  - id: P3
+    part: project
+    title: The template is edited without running the engine
+    without: >-
+      Every template change would need a full build of some repo to preview it.
+    fix: >-
+      `preview_template.py` injects a saved data JSON file into the template and
+      writes the HTML.
+    files: [scripts/preview_template.py]
+
+stories:
+  - id: S1
+    act: "Act 1: Build a tour"
+    title: I build a tour of a repo that has no tour.yaml (auto mode)
+    command: repotour build .
+    summary: >-
+      With no `.repotour/tour.yaml` the engine groups files by top-level folder,
+      leaves the problem text empty and still writes a complete HTML page.
+    steps:
+      - text: >-
+          `main` parses the arguments and calls `_build`, which resolves the
+          folder and calls `build_data`.
+        files: [src/repotour/cli.py]
+      - text: >-
+          `load_config` finds no `tour.yaml`, so `config.tour` is `None`. It
+          still reads `notes.yaml` if that exists.
+        files: [src/repotour/config.py]
+      - text: >-
+          `collect_facts` calls `scan_files`, parses every file once, gives each
+          a role and builds `used_by`.
+        files: [src/repotour/repo.py, src/repotour/scan.py, src/repotour/roles.py]
+      - text: >-
+          `assemble` applies any notes (the no-entry coverage check runs only when
+          `tour.yaml` exists), then calls `auto_layout`. It makes one
+          part per top-level folder (looking through `src/`), one for root files
+          and one for tests, each with one placeholder problem.
+        files: [src/repotour/build.py, src/repotour/notes.py, src/repotour/layout.py]
+      - text: >-
+          `write_html` puts the data into the template and writes
+          `.repotour/tour.html`. `_build` prints the warnings and a line with the
+          file, line and warning counts.
+        files: [src/repotour/render.py, src/repotour/cli.py]
+  - id: S2
+    act: "Act 1: Build a tour"
+    title: The skill writes the tour content
+    command: /repotour
+    summary: >-
+      The skill is a Markdown file that tells Claude to call the CLI, read the
+      code, write the two YAML files and loop on `repotour build` until there are
+      no warnings. The skill files are not in this tour's scan.
+    steps:
+      - text: >-
+          The skill runs `repotour --version` and stops if the command is missing.
+          The version comes from `__init__.py` through the `--version` flag.
+        files: [src/repotour/cli.py, src/repotour/__init__.py]
+      - text: >-
+          It runs `repotour scan ROOT --json`. `_scan` loads the config, collects
+          facts, applies notes and prints `scan_json`: one entry per file with
+          header, role, outline, imports, libs and `used_by`.
+        files: [src/repotour/cli.py, src/repotour/repo.py, src/repotour/notes.py]
+      - text: >-
+          Claude reads the README, the entry points and any file whose header and
+          outline are not enough, then writes `tour.yaml` and `notes.yaml`. This
+          step is done by the model following `SKILL.md` and
+          `reference/writing-guide.md`; no engine code runs.
+        files: []
+      - text: >-
+          It runs `repotour build ROOT`. `load_config` parses the YAML and
+          `written_layout` places files under the problems Claude wrote.
+        files: [src/repotour/config.py, src/repotour/layout.py]
+      - text: >-
+          Claude reads each warning printed to stderr, edits the YAML and builds
+          again until the count is zero. It then offers `--open` and mentions
+          `repotour check` for CI.
+        files: [src/repotour/cli.py, src/repotour/notes.py]
+  - id: S3
+    act: "Act 2: A file is parsed"
+    title: A Python file is parsed
+    command: repotour scan . --json
+    summary: >-
+      One Python file goes from text to header, outline, imports and libraries.
+    steps:
+      - text: >-
+          `scan_files` keeps the file if it is not in a skipped folder or a
+          symbolic link, its suffix is in `DEFAULT_SUFFIXES` and no `exclude`
+          pattern matches. `collect_facts` reads it with `read_text`.
+        files: [src/repotour/scan.py, src/repotour/repo.py]
+      - text: >-
+          `analyze_file` looks up the analyzer for `.py` in `REGISTRY` and calls
+          `PythonAnalyzer.analyze`. If the analyzer raises, `_analyze` in
+          `repo.py` records a warning and lists the file without an outline.
+        files: [src/repotour/analyzers/__init__.py, src/repotour/repo.py]
+      - text: >-
+          `ast.parse` reads the source. On a syntax error the file gets a
+          warning and only a comment header.
+        files: [src/repotour/analyzers/python.py]
+      - text: >-
+          The header is the first paragraph of the module docstring (after
+          `_prose_lines` blanks reST titles, ASCII art and copyright fields), or
+          the leading `#` comment block. `_outline` lists functions, classes with
+          their methods, and dicts and lists that name functions (tables), found
+          at top level or inside `if` and `try` blocks; `_collapse` keeps the
+          first definition of a name and shows overloads by their implementation.
+          Upper-case constants are recorded separately.
+        files: [src/repotour/analyzers/python.py, src/repotour/analyzers/headers.py]
+      - text: >-
+          `arrange` nests each private helper under the one item that uses it
+          and fills `calls` for every item.
+        files: [src/repotour/analyzers/outline.py]
+      - text: >-
+          `_collect_imports` resolves every `import` and `from ... import`,
+          including relative ones and imports inside functions, to a repo file
+          through `_find_module`. Anything else goes into `libs`, standard library
+          included.
+        files: [src/repotour/analyzers/python.py, src/repotour/analyzers/base.py]
+      - text: >-
+          Back in `collect_facts`, the import lists are inverted to make `used_by`.
+        files: [src/repotour/repo.py]
+  - id: S4
+    act: "Act 2: A file is parsed"
+    title: A TypeScript file is parsed
+    command: repotour scan . --json
+    summary: >-
+      The same result for a `.ts` or `.tsx` file, produced without a parser.
+      This repo has no TypeScript files; the tests use a fixture app.
+    steps:
+      - text: >-
+          `REGISTRY` maps `.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`
+          and `.cts` to `JavaScriptAnalyzer`.
+        files: [src/repotour/analyzers/__init__.py]
+      - text: >-
+          `lex` returns a copy of the source with comments, strings, template
+          text and regex literals replaced by spaces, so offsets and line
+          numbers stay the same. It also keeps the text of each string by
+          offset. The header comes from `slash_comment_header`, which skips
+          directives such as `'use strict'`, tool comments and license banners.
+        files: [src/repotour/analyzers/jslex.py, src/repotour/analyzers/headers.py]
+      - text: >-
+          `Outliner.build` matches functions, classes, arrow functions, types,
+          `export default` forms and export lists at bracket depth 0. A `const`
+          holding an object or array becomes a table only if it names a function,
+          and another exported value is listed as a value. Overloads are shown as
+          their implementation and multi-line signatures are put on one line.
+        files: [src/repotour/analyzers/jsoutline.py, src/repotour/analyzers/outline.py]
+      - text: >-
+          `_collect_imports` runs regexes for `import ... from`, `export ... from`,
+          side-effect imports, `import()` and `require()` on the cleaned text and
+          reads the path from the saved strings.
+        files: [src/repotour/analyzers/javascript.py]
+      - text: >-
+          `JsResolver.resolve` tries relative paths (also `.js` written for a
+          `.ts` file, and `index` files), then `paths` and `baseUrl` from the
+          nearest `tsconfig.json` or `jsconfig.json` (merged with one level of
+          `extends`), if that config's `include` and `exclude` cover the importing
+          file. Unresolved bare names go into `libs` through `library_name`.
+        files: [src/repotour/analyzers/jsresolve.py]
+      - text: >-
+          `_only_reexports` marks a file that only re-exports, and
+          `assign_role` gives such an `index.js` or `index.ts` the helper role.
+        files: [src/repotour/analyzers/javascript.py, src/repotour/roles.py]
+  - id: S5
+    act: "Act 3: Check and output"
+    title: I check the tour for problems
+    command: repotour check
+    summary: >-
+      Mistakes are either errors that stop the run (exit 2) or warnings that
+      are counted (exit 1 from `check`, or from `build --strict`).
+    steps:
+      - text: >-
+          `config.py` raises `ConfigError` for YAML syntax errors, unknown part
+          ids, unknown role ids, duplicate ids and guide items that name a
+          missing story or part. `main` prints it as one line and returns 2. It
+          only warns about empty recommended fields and part colours that are
+          not plain.
+        files: [src/repotour/config.py, src/repotour/cli.py]
+      - text: >-
+          `layout.py` warns about patterns that match nothing, a file under two
+          problems, a file under none, a part with no problems and a problem
+          with no files.
+        files: [src/repotour/layout.py]
+      - text: >-
+          `_stories` in `build.py` warns about story step paths that match
+          nothing and about step files not under any problem.
+        files: [src/repotour/build.py]
+      - text: >-
+          `apply_notes` warns about missing notes (once a file has any note),
+          stale note names, and notes for files that are absent or not outlined.
+          `coverage_warnings` warns about a non-test file with outline items and no
+          entry at all; `assemble` runs it only when `tour.yaml` exists.
+        files: [src/repotour/notes.py]
+      - text: >-
+          The scanner and analyzers add warnings for files over 1 MB, symbolic
+          links, Python syntax errors and analyzer crashes.
+        files: [src/repotour/scan.py, src/repotour/repo.py, src/repotour/analyzers/python.py]
+      - text: >-
+          `_check` prints each warning to stderr and returns 1 if there is any.
+          `_build --strict` does the same after writing the HTML.
+        files: [src/repotour/cli.py]
+  - id: S6
+    act: "Act 3: Check and output"
+    title: The data becomes an HTML page
+    command: repotour build . --open
+    summary: >-
+      The dictionary from `build_data` is written into the template as JSON.
+    steps:
+      - text: >-
+          `assemble` builds the dictionary: project text, statistics, parts with
+          file and line counts, part-to-part import counts, problems, stories with
+          resolved files, per-file records and warnings.
+        files: [src/repotour/build.py]
+      - text: >-
+          `load_template` reads `templates/tour.html` from the installed package
+          (or the file given with the hidden `--template` option).
+        files: [src/repotour/render.py]
+      - text: >-
+          `render_html` raises `RenderError` if the placeholder is missing, then
+          replaces it with the JSON, writing every `<` as `\u003c`.
+        files: [src/repotour/render.py]
+      - text: >-
+          `write_html` creates the folder and writes the file. With `--open`,
+          `_build` opens it in the default browser.
+        files: [src/repotour/render.py, src/repotour/cli.py]
+      - text: >-
+          To work on the template alone, `preview_template.py` does the same
+          replacement with a saved JSON file.
+        files: [scripts/preview_template.py]
+  - id: S7
+    act: "Act 4: Set up and extend"
+    title: I install the skill
+    command: repotour install-skill --project .
+    summary: >-
+      The skill folder inside the package is copied to a `.claude/skills` folder.
+    steps:
+      - text: >-
+          `_install_skill` chooses the target: the home folder for `--user`,
+          otherwise the given project folder or the current folder, and passes
+          `--force` on.
+        files: [src/repotour/cli.py]
+      - text: >-
+          `install_skill` checks that the packaged `skill/SKILL.md` exists. If
+          `.claude/skills/repotour` already exists it raises `InstallError` (exit 2)
+          unless `--force` is given, in which case it removes the folder, or only
+          the link if it is a symlink. It then copies the packaged files with
+          `_copy_tree`, skipping `__pycache__`.
+        files: [src/repotour/install.py]
+      - text: >-
+          The packaged copy comes from `skills/repotour`. `sync_skill.py`
+          replaces the package copy, and CI runs it with `--check` to fail when
+          the two differ. `pyproject.toml` includes the copy in the wheel.
+        files: [scripts/sync_skill.py, .github/workflows/ci.yml, pyproject.toml]
+  - id: S8
+    act: "Act 4: Set up and extend"
+    title: I start a tour by hand with init
+    command: repotour init
+    summary: >-
+      `init` writes starter YAML files that build with no warnings but contain
+      TODO text.
+    steps:
+      - text: >-
+          `init_project` refuses to run if either file exists, unless `--force`.
+        files: [src/repotour/init_cmd.py, src/repotour/cli.py]
+      - text: >-
+          It scans the repo with an empty config and uses `auto_parts` to make
+          one part and one TODO problem per top-level folder.
+        files: [src/repotour/init_cmd.py, src/repotour/layout.py]
+      - text: >-
+          `_notes_skeleton` writes an empty note for every outline item, using
+          `outline_keys` so the keys match what `apply_notes` expects.
+        files: [src/repotour/init_cmd.py, src/repotour/notes.py]
+  - id: S9
+    act: "Act 4: Set up and extend"
+    title: I add support for another language
+    summary: >-
+      A new analyzer is one class plus an entry in `LANGUAGES` and a mapping in
+      `REGISTRY`. The scanner's default suffix list is built from `LANGUAGES`.
+    steps:
+      - text: >-
+          Write a class with `analyze(path, text, ctx)` that returns `FileFacts`.
+        files: [src/repotour/analyzers/base.py]
+      - text: >-
+          Add the suffixes to `LANGUAGES` in `__init__.py`. That gives each file a
+          language name through `language_for` and adds the suffix to
+          `DEFAULT_SUFFIXES`, so the scanner lists the files.
+        files: [src/repotour/analyzers/__init__.py, src/repotour/scan.py]
+      - text: >-
+          Map the suffixes to the new class in `REGISTRY`. The Python and
+          JavaScript entries are built from `LANGUAGES`; a new language needs its
+          own line, and suffixes left out fall back to `GenericAnalyzer`.
+        files: [src/repotour/analyzers/__init__.py]
+
+guide:
+  - text: Start with the map; the tour has six parts.
+  - story: S1
+    text: the main path. Everything else supports it.
+  - story: S2
+    text: how the skill uses the same commands.
+  - part: analyzers
+    text: what is read from each file, met in the parsing stories.
+  - story: S3
+    text: a Python file from text to outline and imports.
+  - story: S4
+    text: the same for TypeScript, with a lexer instead of a parser.
+  - part: content
+    text: how the written YAML is loaded, placed and checked.
+  - story: S5
+    text: which mistakes are errors and which are warnings.
+  - part: output
+    text: how the data model becomes a page.
+  - story: S6
+    text: the last step of every build.
+  - story: S7
+    text: how the skill gets into Claude Code.

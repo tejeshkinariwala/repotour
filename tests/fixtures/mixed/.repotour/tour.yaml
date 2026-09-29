@@ -1,0 +1,57 @@
+project:
+  name: Acme Mixed
+  tagline: A fixture that triggers every warning.
+parts:
+  - id: app
+    name: App layer
+    role: Talks to callers
+    folders: [src/app/]
+    summary: The app part.
+  - id: core
+    name: Core
+    role: Does the work
+    folders: [src/core/]
+    summary: The core part.
+  - id: empty
+    name: Empty part
+    role: Has no problems on purpose
+    folders: [nowhere/]
+problems:
+  - id: A1
+    part: app
+    title: Callers send raw text
+    without: Nothing would clean it.
+    fix: server.py cleans it.
+    files: [src/app/server.py, src/app/routes.py]
+  - id: C1
+    part: core
+    title: Work needs a home
+    without: Work would be scattered.
+    fix: engine.py holds it.
+    files: [src/core/engine.py, "src/core/nothing_*.py", src/core/missing.py]
+    tests: [tests/test_engine.py]
+  - id: C2
+    part: core
+    title: A problem with no files
+    without: n/a
+    fix: n/a
+  - id: C3
+    part: core
+    title: Lists a file that A1 already owns
+    without: n/a
+    fix: n/a
+    files: [src/app/routes.py]
+stories:
+  - id: S1
+    title: Serve one request
+    summary: One call from server to engine.
+    steps:
+      - text: The server parses the text.
+        files: [src/app/server.py]
+      - text: The engine runs it.
+        files: [src/core/engine.py, src/core/unlisted.py, "src/nowhere/*.py"]
+guide:
+  - text: Read the story first.
+    story: S1
+  - text: Then the core.
+    part: core

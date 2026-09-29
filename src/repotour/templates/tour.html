@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RepoTour</title>
+<style>
+:root{
+  --bg:#f6f6f3; --surface:#ffffff; --surface2:#f0f0ec; --text:#1c2230; --muted:#59616f; --border:#dcdcd5;
+  --accent:#2350c8; --accent-bg:#e8eefc; --warn:#8a5300; --warn-bg:#fff3d6; --warn-border:#e8c777;
+  --shadow:0 1px 2px rgba(20,25,40,.06),0 2px 8px rgba(20,25,40,.04);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+:root[data-theme=dark]{
+  --bg:#13161c; --surface:#1b1f27; --surface2:#242933; --text:#e6e9ef; --muted:#a3abb8; --border:#2f3541;
+  --accent:#86aaff; --accent-bg:#232f4d; --warn:#f3c56b; --warn-bg:#3a2e14; --warn-border:#6b5320;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{scroll-padding-top:76px}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:4px}
+code,.mono{font-family:var(--mono);font-size:.88em}
+h1{font-size:2rem;line-height:1.2;margin:0 0 .4rem;letter-spacing:-.01em}
+h2{font-size:1.3rem;margin:2.4rem 0 .8rem;letter-spacing:-.005em}
+h3{font-size:1.05rem;margin:0 0 .4rem}
+p{margin:.6rem 0}
+.prose{max-width:70ch}
+.muted{color:var(--muted)}
+.small{font-size:.86rem}
+.skip{position:absolute;left:-999px}
+.skip:focus{left:8px;top:8px;background:var(--surface);padding:6px 10px;z-index:100}
+
+/* header */
+header.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border)}
+.top-in{max-width:1120px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:1.05rem;color:var(--text);white-space:nowrap}
+.brand:hover{text-decoration:none}
+nav.main{display:flex;gap:2px;flex-wrap:wrap}
+nav.main a{color:var(--muted);padding:6px 10px;border-radius:6px;font-size:.94rem}
+nav.main a:hover{background:var(--surface2);text-decoration:none;color:var(--text)}
+nav.main a[aria-current=page]{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.spacer{flex:1}
+.searchbox{position:relative;min-width:200px;flex:0 1 300px}
+.searchbox input{width:100%;padding:7px 34px 7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font:inherit;font-size:.92rem}
+.searchbox kbd{position:absolute;right:9px;top:50%;transform:translateY(-50%);font:.75rem var(--mono);color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:0 5px;pointer-events:none}
+.dropdown{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);max-height:70vh;overflow:auto;z-index:30;min-width:340px}
+.dropdown[hidden]{display:none}
+.dd-h{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px 12px 2px}
+.dd-i{display:block;padding:6px 12px;color:var(--text);font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd-i:hover,.dd-i.sel{background:var(--accent-bg);text-decoration:none}
+.dd-i .muted{margin-left:6px;font-size:.82rem}
+.iconbtn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 10px;font:inherit;font-size:.9rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.iconbtn:hover{background:var(--surface2)}
+.badge{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-border);border-radius:999px;font-size:.75rem;font-weight:700;padding:0 7px;line-height:1.4}
+
+main{max-width:1120px;margin:0 auto;padding:28px 20px 60px;outline:none;min-height:70vh}
+footer{max-width:1120px;margin:0 auto;padding:18px 20px 40px;color:var(--muted);font-size:.86rem;border-top:1px solid var(--border)}
+
+.tagline{font-size:1.15rem;color:var(--muted);margin:0 0 1rem;max-width:60ch}
+.crumbs{font-size:.88rem;color:var(--muted);margin-bottom:.8rem}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:1.1rem 0}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 14px;box-shadow:var(--shadow)}
+.stat b{font-size:1.25rem;display:block;line-height:1.2}
+.stat span{font-size:.8rem;color:var(--muted)}
+.banner{background:var(--accent-bg);border:1px solid var(--accent);border-radius:10px;padding:12px 16px;margin:1rem 0;max-width:80ch}
+.banner code{background:var(--surface);padding:1px 6px;border-radius:4px}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow)}
+.pcard{border-top:5px solid var(--pc,var(--accent));display:block;color:var(--text)}
+a.pcard:hover{text-decoration:none;border-color:var(--pc,var(--accent));transform:translateY(-1px)}
+.pcard h3{margin:0 0 2px;font-size:1.1rem}
+.pcard .role{color:var(--muted);font-size:.9rem;margin-bottom:8px}
+.pcard .nums{font-size:.82rem;color:var(--muted)}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--pc,var(--accent));margin-right:6px}
+.map{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px;box-shadow:var(--shadow);margin-bottom:14px}
+.map svg{width:100%;height:auto;display:block;max-height:440px}
+.map .node rect{fill:var(--pc);fill-opacity:.16;stroke:var(--pc);stroke-width:2}
+.map .node:hover rect{fill-opacity:.3}
+.map .node text{fill:var(--text);font:600 14px var(--sans)}
+.map .node text.sub{font:12px var(--sans);fill:var(--muted)}
+.map .edge{fill:none;stroke:var(--muted);opacity:.75}
+.map .elabel{font:600 11px var(--sans);fill:var(--text);paint-order:stroke;stroke:var(--surface);stroke-width:4px}
+.deps{margin:.4rem 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:2px 18px;font-size:.92rem}
+.deps li{padding:2px 0}
+.arrow{color:var(--muted);margin:0 4px}
+
+.legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:10px}
+.role-item{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.role-item .em{font-size:1.4rem;line-height:1.3}
+.role-item small{display:block;color:var(--muted);line-height:1.4}
+
+.act{margin:1.2rem 0 .3rem;font-size:.8rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.storylist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.storylist a.story{display:block;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text)}
+.storylist a.story:hover{border-color:var(--accent);text-decoration:none}
+.storylist .t{font-weight:600}
+ol.guide{padding-left:1.4rem;max-width:70ch}
+ol.guide li{margin:.5rem 0;padding-left:.3rem}
+
+/* file rows */
+.rows{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.row{display:grid;grid-template-columns:1.7rem minmax(0,1.3fr) minmax(0,2fr) 5.6rem;gap:2px 10px;align-items:baseline;padding:7px 12px;border-top:1px solid var(--border);color:var(--text)}
+.row:first-child{border-top:0}
+.row:hover{background:var(--accent-bg);text-decoration:none}
+.row .em{text-align:center}
+.row .path{font-family:var(--mono);font-size:.84rem;word-break:break-all;color:var(--accent)}
+.row .path .dir{color:var(--muted)}
+.row .purpose{font-size:.9rem;color:var(--muted)}
+.row .lines{text-align:right;font-size:.78rem;color:var(--muted);font-family:var(--mono);white-space:nowrap}
+.row .hit{grid-column:2/-1;font-size:.8rem;color:var(--muted)}
+.more{display:block;width:100%;background:var(--surface2);border:0;border-top:1px solid var(--border);padding:8px;color:var(--accent);cursor:pointer;font:inherit;font-size:.9rem}
+.tagbtn{display:inline-block;font-size:.72rem;background:var(--surface2);color:var(--muted);border-radius:4px;padding:0 6px;margin-left:6px;vertical-align:middle;font-weight:600}
+
+/* part & problems */
+.phead{border-left:8px solid var(--pc,var(--accent));padding-left:16px;margin-bottom:1rem}
+.problem{margin:16px 0}
+.pid{font:700 .78rem var(--mono);background:var(--pc-bg,var(--surface2));color:var(--text);border:1px solid var(--pc,var(--border));border-radius:5px;padding:1px 7px;margin-right:8px;vertical-align:middle}
+.problem .lbl{font-size:.74rem;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:var(--muted);margin-top:.9rem;display:block}
+.problem .rows,.step .rows{margin-top:10px}
+.sub-h{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin:14px 0 6px}
+.placeholder-note{font-size:.88rem;color:var(--muted);font-style:italic}
+
+/* story */
+.cmd{display:flex;align-items:stretch;gap:0;margin:1rem 0;max-width:min(80ch,100%)}
+.cmd code{flex:1;min-width:0;background:#161a22;color:#e6e9ef;padding:10px 14px;border-radius:8px 0 0 8px;overflow-x:auto;white-space:pre;font-size:.9rem}
+.cmd button{border:1px solid var(--border);border-left:0;background:var(--surface);color:var(--text);padding:0 14px;border-radius:0 8px 8px 0;cursor:pointer;font:inherit;font-size:.88rem}
+.cmd button:hover{background:var(--surface2)}
+ol.steps{list-style:none;padding:0;margin:1rem 0;counter-reset:s}
+.step{display:grid;grid-template-columns:2.2rem minmax(0,1fr);gap:12px;margin:18px 0}
+.step .n{width:2rem;height:2rem;border-radius:50%;background:var(--accent);color:var(--surface);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:.9rem}
+:root[data-theme=dark] .step .n{color:#0d1220}
+.step p{margin:.2rem 0 0}
+.pn{display:flex;justify-content:space-between;gap:14px;margin-top:2.4rem;flex-wrap:wrap}
+.pn>span{flex:0 1 48%}
+.pn a{display:block;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text)}
+.pn a small{display:block;color:var(--muted)}
+.pn a:hover{border-color:var(--accent);text-decoration:none}
+
+/* all files */
+.filters{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin:1rem 0;box-shadow:var(--shadow)}
+.filters input[type=search]{width:100%;max-width:520px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
+.chiprow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.chiprow .k{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;width:4.6rem}
+.chip{border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:999px;padding:2px 11px;font:inherit;font-size:.84rem;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+:root[data-theme=dark] .chip[aria-pressed=true]{color:#0d1220}
+.chip .c{opacity:.7;font-size:.78rem;margin-left:3px}
+details.folder{margin:2px 0}
+details.folder>summary{cursor:pointer;padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:.86rem;list-style:none;display:flex;gap:8px;align-items:baseline}
+details.folder>summary::-webkit-details-marker{display:none}
+details.folder>summary::before{content:"\25B8";color:var(--muted);display:inline-block;width:.9em;transition:transform .12s}
+details.folder[open]>summary::before{transform:rotate(90deg)}
+details.folder>summary:hover{background:var(--surface2)}
+details.folder>summary .cnt{color:var(--muted);font-size:.78rem;font-family:var(--sans)}
+details.folder>.inner{margin-left:14px;padding-left:12px;border-left:1px solid var(--border)}
+.tree{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px}
+.tree .rows{border:0;border-radius:6px}
+.tree-files{margin:2px 0 6px}
+
+/* file view */
+.fhead{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline}
+.fpath{font:600 1.2rem var(--mono);word-break:break-all;margin:0}
+.pill{display:inline-flex;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:2px 12px;font-size:.88rem;color:var(--text)}
+a.pill:hover{border-color:var(--accent);text-decoration:none}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin:.8rem 0}
+.purpose-big{font-size:1.1rem;max-width:70ch;margin:1rem 0}
+.outline,.outline ul{list-style:none;margin:0;padding:0}
+.outline{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 14px}
+.outline ul{margin-left:1.2rem;padding-left:.9rem;border-left:2px solid var(--border)}
+.item{padding:8px 6px;border-radius:8px;transition:background .3s}
+.item+.item{border-top:1px dashed var(--border)}
+.outline ul .item{border-top:0}
+.item.flash{background:var(--accent-bg);box-shadow:0 0 0 2px var(--accent)}
+.irow{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.kind{display:inline-flex;align-items:center;justify-content:center;min-width:1.5rem;height:1.5rem;border-radius:6px;font:700 .78rem var(--mono);color:#fff;flex:none;align-self:center}
+.k-class{background:#7c3aed}.k-function{background:#2563eb}.k-method{background:#0e7490}.k-table{background:#b45309}.k-type{background:#be185d}.k-const{background:#4b5563}.k-value{background:#0f766e}.k-other{background:#4b5563}
+.nm{font-weight:700;font-family:var(--mono);font-size:.95rem}
+.sig{font-family:var(--mono);font-size:.83rem;color:var(--muted);word-break:break-word}
+.ln{font:.78rem var(--mono);color:var(--muted);margin-left:auto}
+.ln a{color:var(--accent)}
+.prose code,.note code,.tagline code,.purpose code,.purpose-big code,.role code,.small code,.problem code,.role-item code,.hit code,.warnlist code,.story code,.pcard code,.step code,.guide code{background:var(--surface2);font-family:var(--mono);font-size:.88em;border-radius:4px;padding:0 3px}
+.note{margin:2px 0 0 2.15rem;font-size:.94rem;max-width:72ch}
+.note.none{color:var(--muted);font-style:italic;font-size:.82rem;opacity:.85}
+.calls{margin:3px 0 0 2.15rem;font-size:.84rem;color:var(--muted)}
+.calls a{font-family:var(--mono);cursor:pointer;margin-right:6px}
+.priv{font-size:.7rem;color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:0 5px}
+ul.methods{margin:4px 0 0 2.15rem !important;border-left:2px solid var(--border);padding-left:.9rem !important}
+.consts{display:flex;flex-wrap:wrap;gap:6px}
+.consts code,.names code,.libs code{background:var(--surface2);border-radius:5px;padding:1px 7px}
+.imp{display:grid;gap:8px}
+.imp-i{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px}
+.names{margin-top:4px;display:flex;flex-wrap:wrap;gap:5px;font-size:.84rem}
+.libs{display:flex;flex-wrap:wrap;gap:6px}
+.empty{color:var(--muted);font-style:italic}
+.warnlist{list-style:none;padding:0;margin:1rem 0;display:grid;gap:8px;max-width:90ch}
+.warnlist li{background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:10px;padding:8px 14px;word-break:break-word}
+.warnlist a{font-family:var(--mono);font-size:.9em;text-decoration:underline}
+.miss{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-border);border-radius:5px;font-size:.74rem;padding:0 7px;font-weight:600}
+
+@media (max-width:820px){
+  main{padding:20px 14px 50px}
+  .row{grid-template-columns:1.7rem minmax(0,1fr) 5.6rem}
+  .row .purpose{grid-column:2/-1;grid-row:2}
+  .row .lines{grid-row:1;grid-column:3}
+  .searchbox{order:5;flex:1 1 100%}
+  .spacer{display:none}
+  .map svg{max-height:340px}
+  .pn>span{flex:1 1 100%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="top-in">
+    <a class="brand" id="brand" href="#/">RepoTour</a>
+    <nav class="main" aria-label="Main">
+      <a href="#/" data-nav="home">Home</a>
+      <a href="#/stories" data-nav="stories">Stories</a>
+      <a href="#/parts" data-nav="parts">Parts</a>
+      <a href="#/files" data-nav="files">All files</a>
+    </nav>
+    <span class="spacer"></span>
+    <div class="searchbox" role="search">
+      <input id="gsearch" type="search" placeholder="Search files, functions, notes" aria-label="Search" autocomplete="off">
+      <kbd aria-hidden="true">/</kbd>
+      <div class="dropdown" id="dd" hidden></div>
+    </div>
+    <a class="iconbtn" id="warnbtn" href="#/warnings" hidden aria-label="Warnings">Warnings <span class="badge" id="warncount">0</span></a>
+    <button class="iconbtn" id="theme" type="button" aria-label="Toggle light and dark theme">Theme</button>
+  </div>
+</header>
+<main id="main" tabindex="-1"></main>
+<footer id="foot"></footer>
+
+<script>
+"use strict";
+const DATA = /*REPOTOUR_DATA*/null;
+
+/* ---------- helpers ---------- */
+const $ = (s, r) => (r || document).querySelector(s);
+function esc(v) {
+  return String(v == null ? "" : v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+/* Prose: escape first, then turn `code` spans into <code>. Single line, no nested backticks. */
+function pr(v) {
+  return esc(v).replace(/`([^`\n]+)`/g, "<code>$1</code>");
+}
+const noTicks = v => String(v == null ? "" : v).replace(/`/g, "");
+const arr = v => Array.isArray(v) ? v : [];
+const strs = v => arr(v).map(str).filter(Boolean);
+const obj = v => (v && typeof v === "object" && !Array.isArray(v)) ? v : {};
+const str = v => v == null ? "" : String(v);
+const num = v => (typeof v === "number" && isFinite(v)) ? v : 0;
+const fmt = n => num(n).toLocaleString("en-US");
+const plural = (n, a, b) => n + " " + (n === 1 ? a : (b || a + "s"));
+const safeColor = c => /^#[0-9a-fA-F]{3,8}$/.test(str(c)) ? c : null;
+const PALETTE = ["#3b82f6","#10b981","#f59e0b","#a855f7","#ef4444","#06b6d4","#84cc16","#ec4899","#f97316","#64748b"];
+
+function normalize(d) {
+  d = obj(d);
+  const proj = obj(d.project);
+  const N = {
+    tool: Object.assign({name: "RepoTour", version: "", url: ""}, obj(d.tool)),
+    mode: d.mode === "auto" ? "auto" : "written",
+    project: {name: str(proj.name) || "Repository tour", tagline: str(proj.tagline), overview: str(proj.overview),
+              repo_url: /^https?:\/\//i.test(str(proj.repo_url)) ? str(proj.repo_url).replace(/\/+$/, "") : "",
+              branch: str(proj.branch) || "main"},
+    built_at: str(d.built_at),
+    stats: obj(d.stats),
+    roles: arr(d.roles).map(r => obj(r)),
+    parts: arr(d.parts).map((p, i) => {
+      p = obj(p);
+      return {id: str(p.id), name: str(p.name) || str(p.id), role: str(p.role), summary: str(p.summary), folders: arr(p.folders),
+              color: safeColor(p.color) || PALETTE[i % PALETTE.length], problems: arr(p.problems), files: num(p.files), lines: num(p.lines)};
+    }),
+    part_links: arr(d.part_links).map(l => obj(l)),
+    problems: arr(d.problems).map(p => {
+      p = obj(p);
+      return {id: str(p.id), part: str(p.part), title: str(p.title), without: str(p.without), fix: str(p.fix),
+              files: strs(p.files), tests: strs(p.tests), placeholder: !!p.placeholder};
+    }),
+    stories: arr(d.stories).map(s => {
+      s = obj(s);
+      return {id: str(s.id), act: str(s.act), title: str(s.title), command: str(s.command), summary: str(s.summary),
+              steps: arr(s.steps).map(t => ({text: str(obj(t).text), files: strs(obj(t).files)}))};
+    }),
+    guide: arr(d.guide).map(g => ({text: str(obj(g).text), story: obj(g).story || null, part: obj(g).part || null})),
+    files: obj(d.files),
+    warnings: arr(d.warnings).map(str)
+  };
+  N.paths = Object.keys(N.files).sort();
+  N.roleById = {}; N.roles.forEach(r => { N.roleById[str(r.id)] = r; });
+  N.partById = {}; N.parts.forEach(p => { N.partById[p.id] = p; });
+  N.problemById = {}; N.problems.forEach(p => { N.problemById[p.id] = p; });
+  N.storyById = {}; N.stories.forEach(s => { N.storyById[s.id] = s; });
+  return N;
+}
+const D = normalize(DATA);
+const F = p => { const f = D.files[p]; return f && typeof f === "object" ? f : null; };
+
+/* ---------- link builders ---------- */
+const fileHref = p => "#/file/" + str(p).split("/").map(encodeURIComponent).join("/");
+const partHref = id => "#/part/" + encodeURIComponent(id);
+const storyHref = id => "#/story/" + encodeURIComponent(id);
+function sourceUrl(path, line) {
+  if (!D.project.repo_url) return "";
+  return D.project.repo_url + "/blob/" + encodeURIComponent(D.project.branch).replace(/%2F/g, "/") + "/" +
+    str(path).split("/").map(encodeURIComponent).join("/") + (line ? "#L" + line : "");
+}
+function roleEmoji(id) { const r = D.roleById[str(id)]; return r && r.emoji ? r.emoji : "•"; }
+function roleName(id) { const r = D.roleById[str(id)]; return r && r.name ? r.name : (str(id) || "Unknown"); }
+function partColorStyle(id) {
+  const p = D.partById[id];
+  return p ? ` style="--pc:${esc(p.color)}"` : "";
+}
+const partLink = id => { const p = D.partById[id]; return p ? `<a href="${partHref(id)}">${esc(p.name)}</a>` : esc(id); };
+
+/* ---------- reusable fragments ---------- */
+function fileRow(path, opts) {
+  opts = opts || {};
+  const f = F(path);
+  const i = path.lastIndexOf("/");
+  const dir = i >= 0 ? path.slice(0, i + 1) : "", base = path.slice(i + 1);
+  const label = opts.base ? `<span class="path">${esc(base)}</span>` : `<span class="path"><span class="dir">${esc(dir)}</span>${esc(base)}</span>`;
+  const em = f ? `<span class="em" title="${esc(roleName(f.role))}">${esc(roleEmoji(f.role))}</span>` : `<span class="em" title="Not in this tour">?</span>`;
+  const purpose = f ? pr(f.purpose) : `<em>not in this tour</em>`;
+  const hit = opts.hit ? `<span class="hit">${pr(opts.hit)}</span>` : "";
+  return `<a class="row" href="${fileHref(path)}" title="${esc(path)}">${em}${label}<span class="purpose">${purpose}</span>` +
+    `<span class="lines">${f && f.lines ? fmt(f.lines) + " lines" : ""}</span>${hit}</a>`;
+}
+function rowsBlock(paths, limit, opts) {
+  paths = arr(paths);
+  if (!paths.length) return "";
+  limit = limit || 200;
+  const first = paths.slice(0, limit).map(p => fileRow(p, opts)).join("");
+  let more = "";
+  if (paths.length > limit) {
+    const id = "more" + (++moreSeq);
+    MORE[id] = {paths: paths.slice(limit), opts};
+    more = `<button class="more" type="button" data-more="${id}">Show ${fmt(paths.length - limit)} more files</button>`;
+  }
+  return `<div class="rows">${first}${more}</div>`;
+}
+let moreSeq = 0; const MORE = {};
+function paras(text) {
+  return str(text).split(/\n\s*\n/).map(s => s.trim()).filter(Boolean).map(s => `<p>${pr(s)}</p>`).join("");
+}
+function rolePill(id) { return `<span class="pill" title="${esc(noTicks((D.roleById[id] || {}).meaning || ""))}">${esc(roleEmoji(id))} ${esc(roleName(id))}</span>`; }
+
+/* ---------- views ---------- */
+function viewHome() {
+  const P = D.project, S = D.stats;
+  let h = `<h1>${esc(P.name)}</h1>`;
+  if (P.tagline) h += `<p class="tagline">${pr(P.tagline)}</p>`;
+  if (D.mode === "auto") {
+    h += `<div class="banner"><strong>Automatic tour.</strong> This tour was generated from the code alone, so parts are simply folders and there are no stories or guide yet. ` +
+      `To add written explanations, run <code>/repotour</code> in Claude Code, or run <code>repotour init</code> and edit <code>.repotour/tour.yaml</code>.</div>`;
+  }
+  if (P.overview) h += `<div class="prose">${paras(P.overview)}</div>`;
+  const langs = Object.entries(obj(S.languages)).sort((a, b) => num(b[1]) - num(a[1]));
+  h += `<div class="stats"><div class="stat"><b>${fmt(S.files != null ? S.files : D.paths.length)}</b><span>files</span></div>` +
+    `<div class="stat"><b>${fmt(S.lines)}</b><span>lines</span></div>` +
+    `<div class="stat"><b>${fmt(D.parts.length)}</b><span>parts</span></div>` +
+    (D.stories.length ? `<div class="stat"><b>${fmt(D.stories.length)}</b><span>stories</span></div>` : "") +
+    langs.map(([l, n]) => `<a class="stat" href="#/files?lang=${encodeURIComponent(l)}" style="color:inherit"><b>${fmt(n)}</b><span>${esc(l)}</span></a>`).join("") + `</div>`;
+
+  h += `<h2>Map of the parts</h2>`;
+  if (!D.parts.length) h += `<p class="empty">No parts found.</p>`;
+  else {
+    h += mapSvg();
+    h += `<div class="grid">` + D.parts.map(p =>
+      `<a class="card pcard" href="${partHref(p.id)}"${partColorStyle(p.id)}><h3>${esc(p.name)}</h3><div class="role">${pr(p.role)}</div>` +
+      (p.summary ? `<p class="small" style="margin:.3rem 0 .6rem">${pr(clip(p.summary, 170))}</p>` : "") +
+      `<div class="nums">${plural(p.files, "file")} &middot; ${fmt(p.lines)} lines &middot; ${plural(p.problems.length, "problem")}</div></a>`).join("") + `</div>`;
+  }
+
+  if (D.stories.length) {
+    h += `<h2>Stories</h2><p class="muted prose">Each story follows one thing that happens in the code, step by step.</p>` + storyList();
+  }
+  if (D.guide.length) {
+    h += `<h2>How to read this tour</h2><ol class="guide">` + D.guide.map(g => {
+      let lead = "";
+      if (g.story && D.storyById[g.story]) lead = `<a href="${storyHref(g.story)}">Story: ${esc(D.storyById[g.story].title)}</a>`;
+      else if (g.part && D.partById[g.part]) lead = `<a href="${partHref(g.part)}">${esc(D.partById[g.part].name)}</a>`;
+      return `<li>${lead}${lead && g.text ? " &mdash; " : ""}${pr(g.text)}</li>`;
+    }).join("") + `</ol>`;
+  }
+  if (D.roles.length) {
+    const counts = {};
+    D.paths.forEach(p => { const r = str(F(p) && F(p).role); counts[r] = (counts[r] || 0) + 1; });
+    h += `<h2>What the emoji mean</h2><p class="muted prose">Every file has a role. It says what kind of job the file does.</p><div class="legend">` +
+      D.roles.map(r => `<a class="role-item" href="#/files?role=${encodeURIComponent(str(r.id))}" style="color:inherit"><span class="em">${esc(r.emoji)}</span><span><b>${esc(r.name)}</b> <span class="muted small">${counts[str(r.id)] ? plural(counts[str(r.id)], "file") : ""}</span><small>${pr(r.meaning)}</small></span></a>`).join("") + `</div>`;
+  }
+  return h;
+}
+function clip(s, n) { s = str(s); return s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s; }
+
+function storyList() {
+  let h = "", act = null, open = false;
+  D.stories.forEach(s => {
+    if (s.act !== act || !open) {
+      if (open) h += `</ul>`;
+      if (s.act) h += `<div class="act">${esc(s.act)}</div>`;
+      h += `<ul class="storylist">`; open = true; act = s.act;
+    }
+    h += `<li><a class="story" href="${storyHref(s.id)}"><span class="t">${esc(s.title)}</span>` +
+      (s.summary ? `<br><span class="muted small">${pr(s.summary)}</span>` : "") + `</a></li>`;
+  });
+  return h + (open ? `</ul>` : "");
+}
+
+function mapSvg() {
+  const parts = D.parts;
+  const ids = new Set(parts.map(p => p.id));
+  const links = D.part_links.filter(l => ids.has(str(l.from)) && ids.has(str(l.to)) && l.from !== l.to && num(l.imports) > 0);
+  let h = `<div class="map">`;
+  if (parts.length <= 10 && parts.length > 0) {
+    const W = 780, H = parts.length === 1 ? 160 : parts.length <= 3 ? 280 : 350, nw = 168, nh = 58;
+    const cx = W / 2, cy = H / 2, rx = W / 2 - nw / 2 - 30, ry = H / 2 - nh / 2 - 26;
+    const pos = {};
+    parts.forEach((p, i) => {
+      if (parts.length === 1) { pos[p.id] = {x: cx, y: cy}; return; }
+      const a = -Math.PI / 2 + i * 2 * Math.PI / parts.length;
+      pos[p.id] = {x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a)};
+    });
+    const clipPt = (c, t) => {
+      const dx = t.x - c.x, dy = t.y - c.y;
+      const s = Math.min(dx ? (nw / 2 + 5) / Math.abs(dx) : 1e9, dy ? (nh / 2 + 5) / Math.abs(dy) : 1e9);
+      return {x: c.x + dx * s, y: c.y + dy * s};
+    };
+    const max = Math.max(1, ...links.map(l => num(l.imports)));
+    let edges = "";
+    links.forEach(l => {
+      const a = pos[l.from], b = pos[l.to];
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+      const bend = Math.min(60, len * 0.22);
+      const c = {x: mx + (-dy / len) * bend, y: my + (dx / len) * bend};
+      const s = clipPt(a, c), e = clipPt(b, c);
+      const w = 1.5 + 4.5 * num(l.imports) / max;
+      const lx = 0.25 * s.x + 0.5 * c.x + 0.25 * e.x, ly = 0.25 * s.y + 0.5 * c.y + 0.25 * e.y;
+      const nameA = (D.partById[l.from] || {}).name, nameB = (D.partById[l.to] || {}).name;
+      edges += `<g><title>${esc(nameA)} imports from ${esc(nameB)}: ${num(l.imports)} file-to-file imports</title>` +
+        `<path class="edge" d="M${s.x.toFixed(1)},${s.y.toFixed(1)} Q${c.x.toFixed(1)},${c.y.toFixed(1)} ${e.x.toFixed(1)},${e.y.toFixed(1)}" stroke-width="${w.toFixed(1)}" marker-end="url(#ah)"/>` +
+        `<text class="elabel" x="${lx.toFixed(1)}" y="${(ly + 4).toFixed(1)}" text-anchor="middle">${num(l.imports)}</text></g>`;
+    });
+    let nodes = "";
+    parts.forEach(p => {
+      const q = pos[p.id];
+      nodes += `<a href="${partHref(p.id)}" class="node" style="--pc:${esc(p.color)}"><rect x="${(q.x - nw / 2).toFixed(1)}" y="${(q.y - nh / 2).toFixed(1)}" width="${nw}" height="${nh}" rx="10"/>` +
+        `<text x="${q.x.toFixed(1)}" y="${(q.y - 3).toFixed(1)}" text-anchor="middle">${esc(clip(p.name, 20))}</text>` +
+        `<text class="sub" x="${q.x.toFixed(1)}" y="${(q.y + 15).toFixed(1)}" text-anchor="middle">${plural(p.files, "file")} &middot; ${fmt(p.lines)} lines</text></a>`;
+    });
+    h += `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Diagram of the parts and which parts import from which. Arrows point from the importing part to the part it uses.">` +
+      `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>` +
+      edges + nodes + `</svg>`;
+  }
+  if (links.length) {
+    h += `<div style="padding:6px 12px 10px"><div class="sub-h" style="margin-top:4px">Which part uses which <span style="text-transform:none;letter-spacing:0;font-weight:400">(arrow points to the part being used; number = files importing files)</span></div><ul class="deps">` +
+      links.slice().sort((a, b) => num(b.imports) - num(a.imports)).map(l =>
+        `<li>${partLink(l.from)}<span class="arrow">&rarr;</span>${partLink(l.to)} <span class="muted small">${plural(num(l.imports), "import")}</span></li>`).join("") + `</ul></div>`;
+  } else if (parts.length > 1) {
+    h += `<p class="muted small" style="padding:4px 12px">No imports between parts were found.</p>`;
+  }
+  return h + `</div>`;
+}
+
+function viewParts() {
+  let h = `<h1>Parts</h1><p class="tagline">The big areas of the repo.</p>`;
+  if (!D.parts.length) return h + `<p class="empty">No parts found.</p>`;
+  return h + `<div class="grid">` + D.parts.map(p =>
+    `<a class="card pcard" href="${partHref(p.id)}"${partColorStyle(p.id)}><h3>${esc(p.name)}</h3><div class="role">${pr(p.role)}</div>` +
+    `<p class="small" style="margin:.3rem 0 .6rem">${pr(clip(p.summary, 200))}</p>` +
+    `<div class="nums">${plural(p.files, "file")} &middot; ${fmt(p.lines)} lines &middot; ${plural(p.problems.length, "problem")}</div></a>`).join("") + `</div>`;
+}
+
+function viewPart(id) {
+  const p = D.partById[id];
+  if (!p) return notFound("part", id);
+  let h = `<div class="crumbs"><a href="#/">Home</a> / <a href="#/parts">Parts</a> / ${esc(p.name)}</div>`;
+  h += `<div class="phead"${partColorStyle(id)}><h1>${esc(p.name)}</h1>` + (p.role ? `<p class="tagline" style="margin:0">${pr(p.role)}</p>` : "") + `</div>`;
+  if (p.summary) h += `<div class="prose">${paras(p.summary)}</div>`;
+  h += `<div class="meta"><span class="pill">${plural(p.files, "file")}</span><span class="pill">${fmt(p.lines)} lines</span>` +
+    (p.folders.length ? `<span class="pill mono">${p.folders.map(esc).join(", ")}</span>` : "") + `</div>`;
+  const out = D.part_links.filter(l => l.from === id && D.partById[l.to]), inn = D.part_links.filter(l => l.to === id && D.partById[l.from]);
+  if (out.length || inn.length) {
+    h += `<div class="meta">` +
+      (out.length ? `<span class="small muted">Uses:</span> ` + out.map(l => `<a class="pill" href="${partHref(l.to)}">${esc(D.partById[l.to].name)} <span class="muted small">${num(l.imports)}</span></a>`).join("") : "") +
+      (inn.length ? ` <span class="small muted" style="margin-left:10px">Used by:</span> ` + inn.map(l => `<a class="pill" href="${partHref(l.from)}">${esc(D.partById[l.from].name)} <span class="muted small">${num(l.imports)}</span></a>`).join("") : "") + `</div>`;
+  }
+  const probs = D.problems.filter(x => x.part === id);
+  h += `<h2>${probs.length === 1 && probs[0].placeholder ? "Files" : "Problems this part solves"}</h2>`;
+  if (!probs.length) h += `<p class="empty">No problems are listed for this part.</p>`;
+  probs.forEach(x => {
+    h += `<section class="card problem" id="p-${esc(x.id)}"${partColorStyle(id)}><h3><span class="pid">${esc(x.id)}</span>${pr(x.title)}</h3>`;
+    if (x.placeholder) h += `<p class="placeholder-note">Files grouped automatically. Written explanations have not been added for this group.</p>`;
+    else {
+      if (x.without) h += `<span class="lbl">Without it</span><p class="prose" style="margin-top:2px">${pr(x.without)}</p>`;
+      if (x.fix) h += `<span class="lbl">The fix</span><p class="prose" style="margin-top:2px">${pr(x.fix)}</p>`;
+    }
+    if (x.files.length) h += `<div class="sub-h">Files (${x.files.length})</div>` + rowsBlock(x.files, 150);
+    if (x.tests.length) h += `<div class="sub-h">Tests (${x.tests.length})</div>` + rowsBlock(x.tests, 100);
+    if (!x.files.length && !x.tests.length) h += `<p class="empty">No files.</p>`;
+    h += `</section>`;
+  });
+  return h;
+}
+
+function viewStories() {
+  let h = `<h1>Stories</h1><p class="tagline">Follow one thing that happens in the code, step by step.</p>`;
+  return h + (D.stories.length ? storyList() : `<p class="empty">This tour has no stories.${D.mode === "auto" ? " Run /repotour in Claude Code to add some." : ""}</p>`);
+}
+
+function viewStory(id) {
+  const i = D.stories.findIndex(s => s.id === id);
+  if (i < 0) return notFound("story", id);
+  const s = D.stories[i];
+  let h = `<div class="crumbs"><a href="#/">Home</a> / <a href="#/stories">Stories</a>${s.act ? " / " + esc(s.act) : ""}</div><h1>${esc(s.title)}</h1>`;
+  if (s.summary) h += `<p class="tagline">${pr(s.summary)}</p>`;
+  if (s.command) h += `<div class="cmd"><code>${esc(s.command)}</code><button type="button" data-copy="${esc(s.command)}">Copy</button></div>`;
+  h += `<ol class="steps">` + s.steps.map((t, n) =>
+    `<li class="step"><span class="n">${n + 1}</span><div><p class="prose">${pr(t.text)}</p>${t.files.length ? rowsBlock(t.files, 50) : ""}</div></li>`).join("") + `</ol>`;
+  if (!s.steps.length) h += `<p class="empty">This story has no steps.</p>`;
+  const prev = D.stories[i - 1], next = D.stories[i + 1];
+  h += `<div class="pn"><span>${prev ? `<a href="${storyHref(prev.id)}"><small>&larr; Previous story</small>${esc(prev.title)}</a>` : ""}</span>` +
+    `<span>${next ? `<a href="${storyHref(next.id)}" style="text-align:right"><small>Next story &rarr;</small>${esc(next.title)}</a>` : ""}</span></div>`;
+  return h;
+}
+
+/* ---- search index ---- */
+let IDX = null;
+function outlineNames(items, acc) {
+  arr(items).forEach(it => {
+    it = obj(it);
+    acc.push(str(it.name), str(it.signature), noTicks(it.note));
+    arr(it.methods).forEach(m => acc.push(str(obj(m).name), noTicks(obj(m).note)));
+    outlineNames(it.children, acc);
+  });
+  return acc;
+}
+function buildIndex() {
+  if (IDX) return IDX;
+  IDX = D.paths.map(p => {
+    const f = F(p);
+    const names = outlineNames(obj(f.outline).items, []);
+    return {p, s: (p + " " + noTicks(f.purpose) + " " + names.join(" ")).toLowerCase(), n: names.map(x => x.toLowerCase())};
+  });
+  return IDX;
+}
+function matchWords(q) { return str(q).toLowerCase().split(/\s+/).filter(Boolean); }
+function hitHint(f, words) {
+  if (!words.length) return "";
+  const items = [];
+  (function walk(list) { arr(list).forEach(it => { it = obj(it); items.push(it); arr(it.methods).forEach(m => items.push(obj(m))); walk(it.children); }); })(obj(f.outline).items);
+  for (const it of items) {
+    const t = (str(it.name) + " " + noTicks(it.note)).toLowerCase();
+    if (words.some(w => t.includes(w)) && !words.every(w => noTicks(f.purpose).toLowerCase().includes(w))) return "in " + str(it.name) + (it.note ? ": " + it.note : "");
+  }
+  return "";
+}
+
+/* ---- all files ---- */
+let FS = {q: "", role: "", part: "", lang: ""};
+let TREE = {};
+function filesQuery() {
+  const p = new URLSearchParams();
+  ["q", "role", "part", "lang"].forEach(k => { if (FS[k]) p.set(k, FS[k]); });
+  const s = p.toString();
+  return "#/files" + (s ? "?" + s : "");
+}
+function viewFiles(query) {
+  FS = {q: query.get("q") || "", role: query.get("role") || "", part: query.get("part") || "", lang: query.get("lang") || ""};
+  const roles = countBy(D.paths, p => str(F(p).role)), partsC = countBy(D.paths, p => str(F(p).part)), langs = countBy(D.paths, p => str(F(p).lang));
+  const chips = (key, entries, label) => entries.length < 2 && !FS[key] ? "" :
+    `<div class="chiprow"><span class="k">${label}</span>` + entries.map(([v, c, name]) =>
+      `<button type="button" class="chip" data-chip="${key}" data-val="${esc(v)}" aria-pressed="${FS[key] === v}">${name}<span class="c">${c}</span></button>`).join("") + `</div>`;
+  const roleE = Object.entries(roles).sort((a, b) => b[1] - a[1]).map(([v, c]) => [v, c, esc(roleEmoji(v) + " " + roleName(v))]);
+  const partE = D.parts.filter(p => partsC[p.id]).map(p => [p.id, partsC[p.id], `<span class="swatch" style="--pc:${esc(p.color)}"></span>${esc(p.name)}`]);
+  const langE = Object.entries(langs).sort((a, b) => b[1] - a[1]).map(([v, c]) => [v, c, esc(v)]);
+  return `<h1>All files</h1><div class="filters"><label class="small muted" for="fq">Search paths, purposes, function names and notes</label><br>` +
+    `<input id="fq" type="search" value="${esc(FS.q)}" placeholder="e.g. checkout, validate, retry" autocomplete="off">` +
+    `<div id="chips">${chips("role", roleE, "Role")}${chips("part", partE, "Part")}${chips("lang", langE, "Language")}</div></div>` +
+    `<div id="fres" aria-live="polite"></div>`;
+}
+function countBy(list, fn) { const o = {}; list.forEach(x => { const k = fn(x); o[k] = (o[k] || 0) + 1; }); return o; }
+function filteredPaths() {
+  const words = matchWords(FS.q);
+  let list = words.length ? buildIndex().filter(e => words.every(w => e.s.includes(w))).map(e => e.p) : D.paths;
+  if (FS.role) list = list.filter(p => str(F(p).role) === FS.role);
+  if (FS.part) list = list.filter(p => str(F(p).part) === FS.part);
+  if (FS.lang) list = list.filter(p => str(F(p).lang) === FS.lang);
+  return list;
+}
+function updateFilesResults() {
+  const list = filteredPaths(), words = matchWords(FS.q);
+  const box = $("#fres"); if (!box) return;
+  TREE = {}; treeSeq = 0;
+  let h = `<p class="muted small"><b>${fmt(list.length)}</b> of ${fmt(D.paths.length)} files` + (list.length ? "" : " match") + `</p>`;
+  if (!list.length) h += `<p class="empty">No files match. Clear a filter or change the search.</p>`;
+  else if (words.length && list.length <= 60) {
+    h += rowsBlockHits(list, words);
+  } else {
+    const root = {name: "", dirs: new Map(), files: []};
+    list.forEach(p => {
+      const segs = p.split("/"); let n = root;
+      for (let i = 0; i < segs.length - 1; i++) {
+        if (!n.dirs.has(segs[i])) n.dirs.set(segs[i], {name: segs[i], dirs: new Map(), files: []});
+        n = n.dirs.get(segs[i]);
+      }
+      n.files.push(p);
+    });
+    h += `<div class="tree">${treeHtml(root, list.length <= 120 || (words.length > 0 && list.length <= 300), true)}</div>`;
+  }
+  box.innerHTML = h;
+}
+function rowsBlockHits(list, words) {
+  return `<div class="rows">` + list.map(p => fileRow(p, {hit: hitHint(F(p), words)})).join("") + `</div>`;
+}
+let treeSeq = 0;
+function countFiles(n) { if (n._c == null) { let c = n.files.length; n.dirs.forEach(d => { c += countFiles(d); }); n._c = c; } return n._c; }
+function treeHtml(node, openAll, isRoot) {
+  let h = "";
+  const dirs = [...node.dirs.values()].sort((a, b) => a.name.localeCompare(b.name));
+  dirs.forEach(d => {
+    let name = d.name, cur = d;
+    while (cur.files.length === 0 && cur.dirs.size === 1) { cur = [...cur.dirs.values()][0]; name += "/" + cur.name; }
+    const id = "t" + (++treeSeq);
+    const open = openAll || (isRoot && dirs.length === 1);
+    TREE[id] = {node: cur, openAll};
+    h += `<details class="folder" data-tree="${id}"${open ? " open" : ""}><summary>${esc(name)}/ <span class="cnt">${plural(countFiles(cur), "file")}</span></summary><div class="inner">${open ? folderBody(id) : ""}</div></details>`;
+    if (open) TREE[id].built = true;
+  });
+  if (node.files.length) h += `<div class="tree-files">${rowsBlock(node.files.slice().sort(), 300, {base: true})}</div>`;
+  return h;
+}
+function folderBody(id) { const t = TREE[id]; return treeHtml(t.node, t.openAll, false); }
+
+/* ---- file view ---- */
+function viewFile(path) {
+  const f = F(path);
+  if (!f) return notFound("file", path);
+  const part = D.partById[f.part], prob = D.problemById[f.problem];
+  const srcUrl = sourceUrl(path, 0);
+  let h = `<div class="crumbs"><a href="#/">Home</a> / <a href="#/files">All files</a>${part ? " / " + partLink(f.part) : ""}</div>`;
+  h += `<div class="fhead"><h1 class="fpath">${esc(path)}</h1>${srcUrl ? `<a href="${esc(srcUrl)}" target="_blank" rel="noopener noreferrer">view source &#8599;</a>` : ""}</div>`;
+  h += `<div class="meta">${rolePill(str(f.role))}` +
+    (part ? `<a class="pill" href="${partHref(part.id)}"><span class="swatch" style="--pc:${esc(part.color)}"></span>${esc(part.name)}</a>` : "") +
+    (prob ? `<a class="pill" href="${partHref(prob.part)}#p-${esc(prob.id)}" data-problem="${esc(prob.id)}"><b>${esc(prob.id)}</b> ${pr(clip(prob.title, 60))}</a>` : "") +
+    `<span class="pill muted">${esc(str(f.lang) || "text")} &middot; ${fmt(f.lines)} lines</span></div>`;
+  if (f.purpose) h += `<p class="purpose-big">${pr(f.purpose)}</p>`;
+  const stories = arr(f.stories).filter(id => D.storyById[id]);
+  if (stories.length) h += `<div class="meta"><span class="small muted">Used in stories:</span>` + stories.map(id => `<a class="pill" href="${storyHref(id)}">${esc(D.storyById[id].title)}</a>`).join("") + `</div>`;
+
+  h += `<h2>Inside the file</h2>`;
+  const ol = f.outline && typeof f.outline === "object" ? f.outline : null;
+  const items = ol ? arr(ol.items) : [];
+  if (!ol) h += `<p class="empty">No outline is available for this kind of file.</p>`;
+  else {
+    const ids = {}; let n = 0;
+    (function reg(list) { list.forEach(it => { it = obj(it); const k = str(it.name); if (k && !(k in ids)) ids[k] = "it-" + (++n); reg(arr(it.children)); }); })(items);
+    const missing = countMissing(items);
+    if (missing && D.mode === "written") h += `<p><span class="miss">notes missing</span> <span class="small muted">${plural(missing, "item")} in this file ${missing === 1 ? "has" : "have"} no note.</span></p>`;
+    if (!items.length) h += `<p class="empty">Nothing to outline: no top-level functions or classes.</p>`;
+    else h += `<ul class="outline">${items.map(it => itemHtml(it, path, ids, false)).join("")}</ul>`;
+    const consts = arr(ol.consts);
+    if (consts.length) h += `<div class="sub-h">Constants</div><div class="consts">${consts.map(c => `<code>${esc(c)}</code>`).join("")}</div>`;
+  }
+
+  h += `<h2>Imports</h2><p class="muted small" style="margin-top:-.4rem">Other files in this repo that this file uses.</p>`;
+  const imps = arr(f.imports).map(obj).filter(i => i.file);
+  h += imps.length ? `<div class="imp">` + imps.map(i => {
+    const nm = arr(i.names);
+    return `<div class="imp-i">${fileInline(i.file)}${nm.length ? `<div class="names">${nm.map(x => `<code>${esc(x)}</code>`).join("")}</div>` : ""}</div>`;
+  }).join("") + `</div>` : `<p class="empty">Imports no other file in this repo.</p>`;
+
+  h += `<h2>Libraries</h2>`;
+  const libs = arr(f.libs);
+  h += libs.length ? `<div class="libs">${libs.map(l => `<code>${esc(l)}</code>`).join("")}</div>` : `<p class="empty">No outside libraries.</p>`;
+
+  h += `<h2>Used by</h2>`;
+  const ub = strs(f.used_by);
+  h += ub.length ? rowsBlock(ub, 150) : `<p class="empty">No other file imports this one.</p>`;
+  return h;
+}
+function fileInline(p) {
+  const f = F(p);
+  return `<a href="${fileHref(p)}"><span title="${esc(f ? roleName(f.role) : "")}">${esc(f ? roleEmoji(f.role) : "?")}</span> <span class="mono">${esc(p)}</span></a>` +
+    (f && f.purpose ? ` <span class="muted small">${pr(clip(f.purpose, 110))}</span>` : "");
+}
+function countMissing(items) {
+  let c = 0;
+  arr(items).forEach(it => { it = obj(it); if (!str(it.note).trim()) c++; arr(it.methods).forEach(m => { if (!str(obj(m).note).trim()) c++; }); c += countMissing(it.children); });
+  return c;
+}
+function lineLink(path, line) {
+  if (!line) return "";
+  const u = sourceUrl(path, line);
+  return `<span class="ln">${u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" title="View source at line ${esc(line)}">L${esc(line)}</a>` : "L" + esc(line)}</span>`;
+}
+function itemHtml(it, path, ids, isChild) {
+  it = obj(it);
+  const kind = str(it.kind) || "function";
+  const kcls = ["class", "function", "method", "table", "type", "const", "value"].includes(kind) ? kind : "other";
+  const glyph = {class: "C", function: "ƒ", method: "m", table: "▦", type: "T", const: "=", value: "v"}[kind] || kind.charAt(0).toUpperCase();
+  const id = ids[str(it.name)];
+  const sig = str(it.signature) && str(it.signature) !== str(it.name) ? `<code class="sig">${esc(it.signature)}</code>` : "";
+  let h = `<li class="item" ${id ? `id="${id}"` : ""}><div class="irow"><span class="kind k-${kcls}" title="${esc(kind)}" aria-label="${esc(kind)}">${esc(glyph)}</span><span class="nm">${esc(it.name)}</span>${sig}` +
+    (it.exported === false ? `<span class="priv" title="Not part of the public interface">private</span>` : "") + lineLink(path, it.line) + `</div>`;
+  h += noteHtml(it.note);
+  const calls = arr(it.calls).map(str).filter(Boolean);
+  if (calls.length) h += `<div class="calls">calls &rarr; ` + calls.map(c => ids[c] ? `<a data-goto="${ids[c]}" role="link" tabindex="0">${esc(c)}</a>` : `<code>${esc(c)}</code>`).join(" ") + `</div>`;
+  const methods = arr(it.methods).map(obj);
+  if (methods.length) h += `<ul class="methods">` + methods.map(m =>
+    `<li class="item"><div class="irow"><span class="kind k-method" title="method" aria-label="method">m</span><span class="nm">${esc(m.name)}</span>` +
+    (str(m.signature) && m.signature !== m.name ? `<code class="sig">${esc(m.signature)}</code>` : "") + lineLink(path, m.line) + `</div>${noteHtml(m.note)}</li>`).join("") + `</ul>`;
+  const kids = arr(it.children);
+  if (kids.length) h += `<ul>` + kids.map(k => itemHtml(k, path, ids, true)).join("") + `</ul>`;
+  return h + `</li>`;
+}
+function noteHtml(n) {
+  n = str(n).trim();
+  if (n) return `<div class="note">${pr(n)}</div>`;
+  return D.mode === "written" ? `<div class="note none">no note yet</div>` : "";
+}
+
+function viewWarnings() {
+  const paths = new Set(D.paths);
+  let h = `<h1>Warnings</h1>`;
+  if (!D.warnings.length) return h + `<p class="empty">No warnings. Everything in the written tour matches the code.</p>`;
+  h += `<p class="muted prose">The tour and the code disagree in these places. Fix them in <code>.repotour/</code> and build again.</p><ul class="warnlist">` +
+    D.warnings.map(w => `<li>${pr(w).replace(/[^\s'"(),:;]+/g, tok => { const raw = tok.replace(/&amp;/g, "&"); return paths.has(raw) ? `<a href="${fileHref(raw)}">${tok}</a>` : tok; })}</li>`).join("") + `</ul>`;
+  return h;
+}
+function notFound(kind, id) {
+  return `<h1>Not found</h1><p>There is no ${esc(kind)} called <code>${esc(id)}</code> in this tour.</p><p><a href="#/">Back to the home page</a></p>`;
+}
+
+/* ---------- router ---------- */
+function parseHash() {
+  let h = location.hash.replace(/^#/, "");
+  if (h.charAt(0) !== "/") h = "/" + h;
+  let query = "";
+  const qi = h.indexOf("?");
+  if (qi >= 0) { query = h.slice(qi + 1); h = h.slice(0, qi); }
+  // a #p-<id> anchor after a part route
+  const ai = h.indexOf("#");
+  let anchor = "";
+  if (ai >= 0) { anchor = h.slice(ai + 1); h = h.slice(0, ai); }
+  const segs = h.split("/").filter((s, i) => i > 0 || s !== "");
+  const dec = s => { try { return decodeURIComponent(s); } catch (e) { return s; } };
+  return {name: dec(segs[0] || ""), arg: segs.slice(1).map(dec).join("/"), query: new URLSearchParams(query), anchor};
+}
+let lastKey = "";
+function render() {
+  const r = parseHash();
+  const app = $("#main");
+  let html, title = D.project.name, nav = "home";
+  try {
+    switch (r.name) {
+      case "part": html = viewPart(r.arg); nav = "parts"; title = (D.partById[r.arg] || {}).name || "Part"; break;
+      case "parts": html = viewParts(); nav = "parts"; title = "Parts"; break;
+      case "story": html = viewStory(r.arg); nav = "stories"; title = (D.storyById[r.arg] || {}).title || "Story"; break;
+      case "stories": html = viewStories(); nav = "stories"; title = "Stories"; break;
+      case "file": html = viewFile(r.arg); nav = "files"; title = r.arg.split("/").pop(); break;
+      case "files": html = viewFiles(r.query); nav = "files"; title = "All files"; break;
+      case "warnings": html = viewWarnings(); nav = ""; title = "Warnings"; break;
+      default: html = viewHome();
+    }
+  } catch (e) {
+    console.error(e);
+    html = `<h1>Something went wrong</h1><p>This view could not be drawn: <code>${esc(e && e.message)}</code></p>`;
+  }
+  app.innerHTML = html;
+  document.title = (title === D.project.name ? title : title + " · " + D.project.name);
+  document.querySelectorAll("nav.main a").forEach(a => { if (a.dataset.nav === nav) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+  if (r.name === "files") updateFilesResults();
+  const key = r.name + "/" + r.arg;
+  if (r.anchor && $("#" + CSS.escape(r.anchor))) { $("#" + CSS.escape(r.anchor)).scrollIntoView(); }
+  else if (key !== lastKey || r.name !== "files") window.scrollTo(0, 0);
+  lastKey = key;
+  closeDd();
+}
+window.addEventListener("hashchange", render);
+
+/* ---------- events ---------- */
+function flash(id) {
+  const el = document.getElementById(id); if (!el) return;
+  el.scrollIntoView({block: "center", behavior: "smooth"});
+  el.classList.add("flash");
+  setTimeout(() => el.classList.remove("flash"), 1800);
+}
+function copyText(t, btn) {
+  const done = () => { const o = btn.textContent; btn.textContent = "Copied"; setTimeout(() => { btn.textContent = o; }, 1400); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done));
+  else fallbackCopy(t, done);
+}
+function fallbackCopy(t, done) {
+  const ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); done(); } catch (e) { /* ignore */ }
+  document.body.removeChild(ta);
+}
+$("#main").addEventListener("click", e => {
+  const t = e.target.closest("[data-goto],[data-copy],[data-more],[data-chip]");
+  if (!t) return;
+  if (t.dataset.goto) { e.preventDefault(); flash(t.dataset.goto); }
+  else if (t.dataset.copy != null) copyText(t.dataset.copy, t);
+  else if (t.dataset.more) {
+    const m = MORE[t.dataset.more]; if (!m) return;
+    const wrap = document.createElement("div"); wrap.innerHTML = m.paths.map(p => fileRow(p, m.opts)).join("");
+    const parent = t.parentNode; parent.removeChild(t);
+    while (wrap.firstChild) parent.appendChild(wrap.firstChild);
+    delete MORE[t.dataset.more];
+  } else if (t.dataset.chip) {
+    const k = t.dataset.chip, v = t.dataset.val;
+    FS[k] = FS[k] === v ? "" : v;
+    history.replaceState(null, "", filesQuery());
+    document.querySelectorAll('[data-chip="' + k + '"]').forEach(b => b.setAttribute("aria-pressed", String(FS[k] === b.dataset.val)));
+    updateFilesResults();
+  }
+});
+$("#main").addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.dataset && e.target.dataset.goto) { e.preventDefault(); flash(e.target.dataset.goto); }
+});
+$("#main").addEventListener("input", e => {
+  if (e.target.id !== "fq") return;
+  clearTimeout(fqTimer);
+  fqTimer = setTimeout(() => { FS.q = e.target.value; history.replaceState(null, "", filesQuery()); updateFilesResults(); }, 120);
+});
+let fqTimer = 0;
+$("#main").addEventListener("toggle", e => {
+  const d = e.target;
+  if (!d.dataset || !d.dataset.tree || !d.open) return;
+  const t = TREE[d.dataset.tree];
+  if (t && !t.built) { t.built = true; d.querySelector(".inner").innerHTML = folderBody(d.dataset.tree); }
+}, true);
+
+/* global search */
+const gs = $("#gsearch"), dd = $("#dd");
+let ddItems = [], ddSel = -1, gsTimer = 0;
+function closeDd() { dd.hidden = true; ddSel = -1; }
+function updateDd() {
+  const words = matchWords(gs.value);
+  if (!words.length) { closeDd(); return; }
+  const hit = s => words.every(w => s.toLowerCase().includes(w));
+  let h = "";
+  const ps = D.parts.filter(p => hit(p.name + " " + p.role)).slice(0, 3);
+  const ss = D.stories.filter(s => hit(s.title + " " + s.summary)).slice(0, 3);
+  const fs = buildIndex().filter(e => words.every(w => e.s.includes(w))).slice(0, 8);
+  const total = buildIndex().filter(e => words.every(w => e.s.includes(w))).length;
+  if (ps.length) h += `<div class="dd-h">Parts</div>` + ps.map(p => `<a class="dd-i" href="${partHref(p.id)}">${esc(p.name)}<span class="muted">${esc(clip(p.role, 50))}</span></a>`).join("");
+  if (ss.length) h += `<div class="dd-h">Stories</div>` + ss.map(s => `<a class="dd-i" href="${storyHref(s.id)}">${esc(s.title)}</a>`).join("");
+  if (fs.length) h += `<div class="dd-h">Files</div>` + fs.map(e => `<a class="dd-i" href="${fileHref(e.p)}">${esc(roleEmoji(F(e.p).role))} <span class="mono">${esc(e.p)}</span></a>`).join("");
+  h += `<a class="dd-i" href="#/files?q=${encodeURIComponent(gs.value.trim())}"><b>See all ${fmt(total)} matching files</b></a>`;
+  dd.innerHTML = h; dd.hidden = false;
+  ddItems = [...dd.querySelectorAll(".dd-i")]; ddSel = -1;
+}
+gs.addEventListener("input", () => { clearTimeout(gsTimer); gsTimer = setTimeout(updateDd, 100); });
+gs.addEventListener("keydown", e => {
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    if (dd.hidden) return;
+    e.preventDefault();
+    ddSel = (ddSel + (e.key === "ArrowDown" ? 1 : -1) + ddItems.length) % ddItems.length;
+    ddItems.forEach((a, i) => a.classList.toggle("sel", i === ddSel));
+    ddItems[ddSel].scrollIntoView({block: "nearest"});
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (ddSel >= 0 && ddItems[ddSel]) location.hash = ddItems[ddSel].getAttribute("href");
+    else if (gs.value.trim()) location.hash = "#/files?q=" + encodeURIComponent(gs.value.trim());
+    closeDd();
+  }
+});
+document.addEventListener("click", e => { if (!e.target.closest(".searchbox")) closeDd(); });
+document.addEventListener("keydown", e => {
+  const tag = (e.target.tagName || "").toLowerCase();
+  const typing = tag === "input" || tag === "textarea" || tag === "select" || e.target.isContentEditable;
+  if (e.key === "/" && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); gs.focus(); gs.select(); }
+  else if (e.key === "Escape") {
+    if (gs.value || document.activeElement === gs) { gs.value = ""; closeDd(); gs.blur(); }
+    else if (document.activeElement && document.activeElement.id === "fq") { const q = document.activeElement; q.value = ""; FS.q = ""; history.replaceState(null, "", filesQuery()); updateFilesResults(); }
+  }
+});
+
+/* theme */
+const root = document.documentElement;
+function setTheme(t, save) {
+  root.setAttribute("data-theme", t);
+  const b = $("#theme"); b.textContent = t === "dark" ? "☀ Light" : "☾ Dark";
+  b.setAttribute("aria-pressed", String(t === "dark"));
+  if (save) { try { localStorage.setItem("repotour-theme", t); } catch (e) { /* file:// may block */ } }
+}
+(function initTheme() {
+  let t = null;
+  try { t = localStorage.getItem("repotour-theme"); } catch (e) { /* ignore */ }
+  if (t !== "dark" && t !== "light") t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  setTheme(t, false);
+})();
+$("#theme").addEventListener("click", () => setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark", true));
+
+/* chrome */
+(function initChrome() {
+  $("#brand").textContent = D.project.name;
+  if (D.warnings.length) { $("#warnbtn").hidden = false; $("#warncount").textContent = D.warnings.length; $("#warnbtn").setAttribute("aria-label", D.warnings.length + " warnings"); }
+  const t = D.tool, when = D.built_at ? " on " + esc(D.built_at) : "";
+  const name = /^https?:\/\//i.test(str(t.url)) ? `<a href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">${esc(t.name)}</a>` : esc(t.name);
+  $("#foot").innerHTML = `Built with ${name}${t.version ? " v" + esc(t.version) : ""}${when}.`;
+  if (!DATA) $("#main").innerHTML = `<h1>No data</h1><p>This is the empty template. Build a tour with <code>repotour build</code>.</p>`;
+})();
+if (DATA) render();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+src/app/server.py:
+  _file: Serves one request.
+  serve: Cleans the text and hands it to the engine.
+  ghost: A function that was deleted.
+src/gone.py:
+  thing: This file is not in the repo.
+config/settings.yaml:
+  mode: Not an outlined file.

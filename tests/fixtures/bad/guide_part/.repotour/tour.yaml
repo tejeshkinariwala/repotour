@@ -1,0 +1,4 @@
+parts:
+  - {id: a, name: A}
+guide:
+  - {text: hi, part: zzz}

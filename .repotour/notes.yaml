@@ -1,0 +1,392 @@
+scripts/leak_check.py:
+  repo_root: Returns the git top-level folder, or the folder above scripts/ if git fails.
+  denylist_path: Returns the denylist path from $REPOTOUR_DENYLIST, or ~/.config/repotour/denylist.txt.
+  load_terms: 'Reads the denylist and returns its non-empty lines that do not start with #.'
+  git_files: Returns the sorted names of tracked, staged and untracked-but-not-ignored files.
+  compile_terms: Returns one case-insensitive whole-word regex for each term.
+  scan: Returns a (file, line number, term) tuple for every line that matches a term, skipping binary files.
+  install_hook: Writes .git/hooks/pre-commit to run this script, unless a hook that is not ours already exists.
+  main: Runs the check or installs the hook; returns 1 on any hit and 0 if clean or if no denylist exists.
+scripts/preview_template.py:
+  main: Replaces the data placeholder in the template with a JSON file and writes the HTML; returns 2 on bad arguments
+    and 1 if the placeholder is not found exactly once.
+scripts/sync_skill.py:
+  differs: Returns True when the packaged skill folder is missing or has different files or contents than skills/repotour.
+  _files: Returns the relative POSIX paths of all files under a folder, ignoring __pycache__.
+  sync: Deletes the packaged skill folder and copies skills/repotour into its place.
+  main: Runs the sync, or with --check reports whether the copy is out of date and returns 1 if it is.
+src/repotour/analyzers/__init__.py:
+  analyzer_for: Returns the analyzer registered for the file's suffix, or the generic analyzer.
+  analyze_file: Parses one file with the analyzer for its suffix and returns its facts.
+  language_for: Returns the language name for a path's suffix from LANGUAGES, otherwise the suffix without its dot, or 'text' if there is no suffix.
+src/repotour/analyzers/base.py:
+  Method: Holds the name, line, signature and note of one method of a class.
+  Item: Holds one outline entry (function, class, table, type or const) with its methods, calls, nested helpers
+    and note.
+  FileFacts: 'Holds everything an analyzer found in one file: header, outline, constants, in-repo imports, libraries
+    and warnings.'
+  Context: Holds the repo root, the set of files in the tour and a scratch dictionary shared by analyzers during
+    one run.
+  Context.dirs: Returns every folder that contains at least one tour file, with the repo root as an empty string.
+  Context.python_roots: 'Returns the folders absolute Python imports may start from: the root, src and any top-level
+    folder with a package.'
+  Context.read_repo_file: Returns the text of a repo file, or None if it cannot be read.
+  Analyzer: 'Defines the interface every analyzer follows: an analyze method that returns FileFacts.'
+  Analyzer.analyze: Parses one file's text and returns its facts.
+  one_line: Collapses whitespace into one line and cuts it to the limit with an ellipsis.
+  count_lines: Returns the number of lines in the text, counting a last line with no newline.
+  add_import: Records an import of a target file and merges the imported names without duplicates.
+src/repotour/analyzers/generic.py:
+  GenericAnalyzer: 'Analyzes files with no outline support: returns language, line count and header comment only.'
+  GenericAnalyzer.analyze: 'Returns facts with a header from leading # comments (or -- and block comments for SQL),
+    and no header for JSON.'
+  _sql_header: Returns the leading -- comment lines (first five lines), or a block comment if there are none.
+src/repotour/analyzers/headers.py:
+  hash_comment_header: 'Returns the leading block of # comments, skipping a shebang or encoding line, as one line.'
+  slash_comment_header: Returns the leading // lines or the first /* */ comment as one line, skipping shebangs, /// directives, 'use strict' directives, /*! banners and tool or license comments that come before the description.
+  _is_noise: Returns True if a comment text starts with a tool directive (eslint, prettier, @ts-, @license and similar) or a license or copyright word, so it is not used as a file description.
+  _block_end: Returns the index of the line that holds the closing */ of the block comment starting at a line, or the last line if it never closes.
+  _block_first_text: Returns the first non-empty text in a block comment's lines, with the comment markers and leading stars removed.
+  _block_comment: Returns the text of a /* */ comment starting at a line, without stars and @tag lines.
+src/repotour/analyzers/javascript.py:
+  JavaScriptAnalyzer: Analyzes JavaScript and TypeScript files with the lexer, the outliner and the import resolver.
+  JavaScriptAnalyzer.analyze: Returns the header, outline, resolved imports, libraries and re-export flag for one
+    file.
+  _collect_imports: Finds import, export-from, dynamic import and require statements in the cleaned text and records
+    each target.
+  _record: 'Records a resolved file with its names, or adds the library name for a bare specifier; ignores URLs
+    and # specifiers.'
+  _imported_names: 'Returns the names in an import clause: ''default'' for a default import, ''*'' for a namespace,
+    and each braced name.'
+  _only_reexports: Returns True when the file has no declarations and contains only re-exports and imports.
+src/repotour/analyzers/jslex.py:
+  Lexed: Holds the source with comments and literals blanked, plus the text of each string by offset of its opening
+    quote.
+  lex: Blanks comments, strings, template text and regex literals in the source, keeping offsets and newlines.
+  _Lexer: Walks the source once and records which spans to blank and which strings to remember.
+  _Lexer.__init__: Stores the text and starts empty lists of spans and strings.
+  _Lexer.build: Returns the text with every recorded span replaced by spaces, keeping newlines.
+  _Lexer.scan: Scans code from a position; at top level runs to the end, inside a template expression stops after
+    the matching brace.
+  _Lexer._brace_end: Counts braces in a range and returns the index after the closing brace, or the new depth if
+    none closes.
+  _Lexer._token: Handles one comment, string, template or slash token and returns the position after it.
+  _Lexer._template: Handles a template literal, scanning nested expressions, and remembers its text only if it has
+    no expression.
+  _Lexer._slash: Decides whether a slash starts a regex literal and, if it does, blanks the regex body.
+  _Lexer._regex_allowed: Returns True when the text before a slash means a regex may start there, such as after
+    an operator or return.
+  _Lexer._blank: Records a span to blank, but only for top-level findings.
+src/repotour/analyzers/jsoutline.py:
+  Brackets: Indexes bracket positions of the cleaned text to give nesting depth, matching closers and statement
+    ends.
+  Brackets.__init__: Scans all brackets and semicolons once and stores depths, pairs and top-level end positions.
+  Brackets.depth_at: Returns the bracket depth at a position.
+  Brackets.statement_end: Returns where the statement starting at a position ends, capped at a limit.
+  Outliner: Finds the top-level declarations of one JS/TS file from its original and cleaned text.
+  Outliner.__init__: Stores the texts and builds the bracket index, the newline list and the set of exported names.
+  Outliner.line_of: Returns the 1-based line number of a text position.
+  Outliner.top_level: Returns the regex matches that start at bracket depth 0.
+  Outliner._skip_ws: Returns the index of the first non-whitespace character at or after a position.
+  Outliner._skip_angle: Returns the index after the > that closes the < at a position, skipping bracketed groups and the > of =>; returns None if it never closes.
+  Outliner._callable_open: After a name, skips optional <generics> and returns the generics text and the index of the opening parenthesis, or None if no parameter list follows.
+  Outliner._skip_type: Skips a type over balanced brackets and returns the index of the => that ends a return type, or of the = that ends a variable type annotation; returns None if neither follows.
+  Outliner._function_value: Returns the generics and parameter text if a function value starts at a position (arrow, async, function expression, or one wrapped in a call such as React.memo), otherwise None.
+  Outliner._has_body: "Returns True if a { body follows a parameter list, and False for a signature that ends at ; or at the end of the line, as an overload does."
+  Outliner._header_end: "Returns the index of the first depth-0 character from a given set, skipping <...>, (...) and [...] groups."
+  Outliner._signature: Returns the one-line signature name<generics>(params) by calling _tidy_signature.
+  Outliner.build: Collects all declaration kinds, keeps the first of each repeated name (an overload group is shown by its implementation), and returns the outline and constants.
+  Outliner._functions: Adds function declarations, including default-exported ones, with their parameter lists.
+  Outliner._classes: Adds class declarations with their methods.
+  Outliner._variables: "Adds const, let and var declarations: function values become function items, upper-case names are recorded as constants, and other values become candidates that _finish keeps as tables, exported values or function aliases."
+  Outliner._initializer: "After a variable name, skips an optional ! and : Type and the =, and returns where the value starts, or None if there is no plain initializer."
+  Outliner._peel: Looks through wrapping parentheses and a trailing as or satisfies to return the function value found, or the identifier that the initializer consists of.
+  Outliner._types: Adds interface, type and enum declarations.
+  Outliner._defaults: Adds export default arrows and objects, and records names exported with export default name.
+  Outliner._export_lists: Records names exported through export { ... }, module.exports = { ... } and exports.name.
+  Outliner._methods: Returns the methods and function-valued properties found directly inside a class body, sorted
+    by line.
+  Outliner._item: Creates an Item with its line number computed from a position.
+  Outliner._params: Returns the text between an opening parenthesis and its matching closer, or an empty string if it has none.
+  Outliner._inner: Returns the text inside a matched parenthesis group as one line.
+  Outliner._finish: Drops candidates that _keep_candidate rejects, turns object and array values that name functions into tables, marks exports, and passes the items to arrange for nesting and calls.
+  Outliner._keep_candidate: "Returns True if a non-function const stays in the outline: it lists functions (a table), or it is exported and not upper-case, in which case an alias of a top-level function becomes a function item."
+  _Decl: Holds a declaration with its start position, its item, the opening bracket of a possible table, whether it has a body, the function it aliases, and whether it is a candidate const.
+  _tidy: Removes newlines just inside brackets and a trailing comma before a closing bracket.
+  _tidy_signature: Returns head<generics>(params) as one line with whitespace collapsed and cut at 120 characters, or just head when params is None.
+src/repotour/analyzers/jsresolve.py:
+  TsConfig: Holds the folder, alias base folder, path aliases and include and exclude globs read from one tsconfig.json or jsconfig.json, after merging any config it extends.
+  TsConfig.covers: Returns True if the config's include and exclude patterns take in a file.
+  JsResolver: Resolves import specifiers to repo files, caching the config found for each folder.
+  JsResolver.__init__: Stores the context and an empty config cache.
+  JsResolver.is_relative: Returns True for '.', '..' and specifiers starting with ./ or ../.
+  JsResolver.resolve: Returns the repo file a specifier points to, trying relative paths, then path aliases, then baseUrl, or None; aliases apply only if the nearest config covers the importing file.
+  JsResolver._try: Returns the repo file for a path, trying the exact name, a .js-to-.ts swap, added suffixes and
+    index files.
+  JsResolver._find_config: Returns the nearest tsconfig or jsconfig in this folder or a parent folder, or None.
+  JsResolver._load_config: Reads tsconfig.json or jsconfig.json in one folder, including one level of extends, and returns the merged TsConfig, or None.
+  JsResolver._layers: Returns the raw config of a file preceded by the config it extends (relative paths only, one level), or None if the JSON cannot be read.
+  _merge: Combines extended and own settings key by key, with later layers overriding earlier ones, resolves paths against baseUrl or the folder that set them, and sorts aliases by longest prefix.
+  _glob_from: Returns a tsconfig include or exclude entry as a repo-relative glob; a name with no wildcard or extension is treated as a folder and takes everything under it.
+  _parse_json: Returns the config as a dict after removing comments and trailing commas, or None if the JSON is invalid or not an object.
+  _normalize: Returns a cleaned relative path, an empty string for the root, or None if it leaves the repo.
+  _match_alias: Returns the text matched by * in an alias pattern, or None if the specifier does not match.
+  library_name: Returns the package name of a specifier, such as @scope/pkg for @scope/pkg/deep.
+src/repotour/analyzers/outline.py:
+  arrange: Fills each item's calls and nests every private helper under the one item that references it.
+  _find_parents: Returns a map from each private item used by exactly one other item to that item, skipping cycles.
+  _is_ancestor: Returns True if a name is another item or one of its ancestors, which would make a cycle.
+src/repotour/analyzers/python.py:
+  PythonAnalyzer: Analyzes Python files with the standard ast module.
+  PythonAnalyzer.analyze: Returns header, outline, constants, in-repo imports and libraries, or a syntax-error warning
+    and no outline.
+  _docstring_header: Returns the first paragraph of the module docstring as one line, after blanking reST titles, lines without letters and copyright or license fields.
+  _prose_lines: "Blanks reST title blocks (with underline and overline), lines with no letters such as ASCII art, and :copyright: or :license: fields."
+  _outline: Returns the functions, classes and function tables found at top level or inside if and try blocks (first definition of a name wins), and the upper-case constants.
+  _flatten: Returns the statements of a body, looking inside if, else, try, except and finally blocks for conditional definitions.
+  _is_overload: Returns True if a function node has an overload decorator, written as overload or typing.overload, with or without a call.
+  _collapse: Keeps one node per function or class name, first occurrence first, and shows an overload group by its implementation, or by its first definition when there is none.
+  _class_item: Returns a class item with its signature and the methods in its body.
+  _container_hint: 'Returns the short text shown for a table: {...}, [...] or (...).'
+  _names_in: Returns every plain name used inside a syntax node.
+  _dunder_all: Returns the names in __all__, or None if the module has none.
+  _collect_imports: Walks the whole tree and resolves each import statement into files or libraries.
+  _handle_import: Resolves an import statement by trying the longest dotted prefix first, else records the top-level
+    library.
+  _handle_from: Resolves a from-import, including relative levels, treating each name as a submodule when a file
+    exists.
+  _submodule_file: Returns the file for a submodule of a package folder, or None.
+  _assigned_name: Returns the single name an assignment sets, or None for multiple or non-name targets.
+  _signature: Returns name(args) with any annotation longer than 40 characters removed.
+  _absolute_roots: Returns the folders absolute imports may start from, plus the importing file's own folder.
+  _join: Joins a root folder and a relative path, tolerating either being empty.
+  _find_module: Returns the module file and package folder for a dotted name searched under each root, or None.
+src/repotour/build.py:
+  build_data: Loads the config, collects facts and returns the JSON-ready data model for a repo.
+  assemble: Applies notes, lays out files, resolves stories and returns the full data dictionary with warnings.
+  _project: Returns the project name, tagline, overview, repo URL and branch, defaulting the name to the folder
+    name and the branch to main.
+  _stats: Returns file count, line count and files per language, most common first.
+  _stories: Resolves each story step's file patterns to files and returns the stories, a file-to-story map and warnings.
+  _file_record: 'Returns the dictionary for one file: language, lines, purpose, role, problem, part, stories, outline,
+    imports, libraries and used_by.'
+  _parts_with_counts: Returns each part with the number of files and lines placed under it.
+  _part_links: Returns counts of imports that cross from one part to another, in part order.
+  local_time_now: Returns the local time with a numeric UTC offset and no zone name.
+  outline_json: Returns a file's outline items and constants as dictionaries.
+  item_json: Returns one outline item, its methods and nested children as a dictionary.
+  imports_json: Returns a file's in-repo imports as sorted file and names entries.
+src/repotour/cli.py:
+  main: Parses the arguments, runs the chosen command and turns a ConfigError, RenderError or InstallError into
+    a one-line message and exit code 2.
+  _parser: Builds the argparse parser with the build, scan, check, init and install-skill commands.
+  HANDLERS: Maps each command name to the function that runs it.
+  _add_path: Adds the optional PATH argument, default the current folder.
+  _build: Builds the data, writes the HTML, prints warnings and a summary line, and returns 1 under --strict if
+    there are warnings.
+  _check: Builds the data without writing, prints warnings and returns 1 if there are any.
+  _init: Writes the starter files and prints each path.
+  _install_skill: Installs the skill for the user or a project folder (default the current folder), passes --force to replace an existing install, and prints the target.
+  _scan: Prints the extracted facts as JSON, as text, or as a file list, applying notes first.
+  _print_paths: Prints file paths as JSON or one per line.
+  _scan_text: Returns the human-readable listing with role emoji, headers, outline lines, imports, libraries and
+    used-by.
+  _root: Returns the resolved repo folder or raises ConfigError if it is not a folder.
+  _print_warnings: Prints each warning to stderr with a 'warning:' prefix.
+  scan_json: 'Returns the scan data for the skill: mode, roles, one entry per file and the warnings.'
+src/repotour/config.py:
+  ConfigError: Error raised for a problem in tour.yaml or notes.yaml that stops the build.
+  Tour: 'Holds the parsed tour.yaml: project, scan patterns, roles, role rules, parts, problems, stories and guide.'
+  Config: Holds the parsed tour (None in auto mode) and the notes.
+  load_config: Reads tour.yaml and notes.yaml from the repo's .repotour folder if they exist.
+  _read_yaml: Returns the parsed YAML of a file or raises ConfigError for a syntax or read error.
+  _parse_tour: Checks the top-level structure of tour.yaml and returns a Tour, raising ConfigError for bad references.
+  _empty_field_warnings: "Returns a warning for each empty recommended field: part name and summary, problem title and fix, story title and steps."
+  _parse_roles: Returns the custom roles, requiring an id.
+  _parse_role_rules: Returns (role, patterns) rules and raises for an unknown role.
+  _color: Returns a part colour if it is a hex, rgb, hsl or plain colour name, and otherwise adds a warning and returns None so the palette is used.
+  _parse_parts: Returns the parts with folders ending in a slash and validated colours, raising on a duplicate id and adding a warning for a colour that is not plain.
+  _parse_problems: Returns the problems, raising on a duplicate id or an unknown part.
+  _parse_stories: Returns the stories, raising on a duplicate id.
+  _parse_steps: Returns the steps of a story as text and file patterns.
+  _parse_guide: Returns the guide items, raising if a story or part id does not exist.
+  _parse_notes: Returns the notes as file path to item name to note text.
+  _text: Returns a stripped string, or an empty string for None.
+  _string_list: Returns a list of strings from a string, a list or None.
+  _mapping_list: Returns the list under a key and raises if it is not a list of mappings.
+  _required: Returns a non-empty text field or raises ConfigError naming the key.
+src/repotour/globs.py:
+  is_pattern: Returns True if the text contains *, ?, [ or {.
+  expand_braces: Expands the first {a,b} group, recursively, into separate patterns.
+  _expand_group: Returns the patterns made by substituting each alternative of one brace group.
+  _split_top_level: Splits brace contents at commas that are not inside a nested group.
+  compile_glob: Compiles a pattern into one regex that must match a whole path, optionally ignoring case.
+  _single_to_regex: Translates one brace-free pattern into regex source.
+  matches: Returns True if a path matches a pattern.
+  matches_any: Returns True if a path matches any of the patterns.
+src/repotour/init_cmd.py:
+  init_project: Writes a starter tour.yaml and notes.yaml and returns their paths; raises ConfigError if they exist
+    and force is not set.
+  _dump: Returns data as YAML text, keeping key order.
+  _starter_tour: Returns a starter tour with one part and one TODO problem per automatic part.
+  _notes_skeleton: Returns an empty note for each outlined file's purpose and every outline item.
+src/repotour/install.py:
+  InstallError: Error raised when the packaged skill is missing or the target already exists and force is not set.
+  install_skill: Copies the packaged skill to PROJECT/.claude/skills/repotour (or the user folder) and returns the target; raises InstallError if it exists, unless force is set, when it removes the old folder or link first.
+  _copy_tree: Copies a packaged folder recursively, skipping __pycache__.
+src/repotour/layout.py:
+  Layout: Holds the parts, problems, file-to-problem and file-to-part maps, the set of listed files and layout warnings.
+  expand_pattern: Returns the files matched by one path or pattern; a name that is an existing file counts as literal even with glob characters, and a plain path that does not exist matches nothing.
+  written_layout: Places files under the problems in tour.yaml and returns the layout with its warnings.
+  _place_problem_files: Expands a problem's file and test patterns, warning on no match and on files already owned.
+  _place_unlisted: Puts files under no problem into a 'Not yet placed' problem in the best-matching part and warns
+    for each.
+  _part_for_folder: Returns the part whose folder is the longest prefix of the path, or None.
+  _other_part: Returns the part with id 'other', creating it if needed.
+  AutoPart: 'Holds an automatically made part: id, name, folders and files.'
+  auto_parts: Groups files into parts by top-level folder (looking through src/), with separate root and test parts.
+  _folder_key: Returns the folder a file is grouped under, or None for files in the root or directly in src.
+  _unique_slug: Returns a lowercase id from a name, adding a number if it is already used.
+  auto_layout: Returns a layout with one part and one placeholder problem for each automatic part.
+src/repotour/notes.py:
+  outline_keys: Yields the note key and item for every item, method and nested child in an outline.
+  purpose_of: Returns the _file note if there is one, otherwise the header comment.
+  apply_notes: Attaches notes to outline items and returns warnings for notes on missing or unoutlined files.
+  _apply_to_file: Attaches one file's notes and returns warnings for missing notes and names that no longer exist.
+  coverage_warnings: Returns one warning for each non-test file that has outline items and no entry in notes.yaml; build runs it only when tour.yaml exists.
+src/repotour/render.py:
+  RenderError: Error raised when the template is missing or has no data placeholder.
+  load_template: Returns the text of the packaged template, or of the given file.
+  render_html: Returns the template with the placeholder replaced by the JSON data, with every < written as < so repo text cannot end the script tag.
+  write_html: Renders the HTML, creates the output folder and writes the file, raising RenderError if it cannot be written.
+src/repotour/repo.py:
+  RepoFacts: Holds the file list, facts, roles, used_by map and warnings for one repo.
+  collect_facts: Scans the files, parses each once, assigns roles and works out which files import each file.
+  _analyze: Runs the analyzer for a file and, if it raises, returns bare facts with a warning.
+src/repotour/roles.py:
+  Rule: Holds a role id and the path patterns that select it, optionally only for re-export files.
+  merge_roles: Returns the built-in roles with custom roles added or replacing one with the same id.
+  assign_role: 'Returns the role for a path: user rules first, then the default rules, then worker.'
+src/repotour/scan.py:
+  ScanResult: Holds the sorted file list and the warnings from scanning.
+  scan_files: Returns the tour's files under a root, applying the include and exclude patterns, skipping symbolic links and files over 1 MB with a warning.
+  _wanted: Returns True unless the file is a lock file, a .min.js or .map file, excluded, or fails the include test (the default include takes known suffixes only).
+  _is_skipped_dir: Returns True if a folder name is in ALWAYS_SKIP_DIRS or in the extra set given, or ends in _cache.
+  _candidate_paths: Returns the files from git if a .git folder exists, minus the always-skipped folders, otherwise from a walk of the folder.
+  _skipped_dir: Returns True if any folder in a path, not counting the file name, is skipped by _is_skipped_dir.
+  _git_paths: Returns tracked and untracked-not-ignored files from git, or None if git is unavailable or fails.
+  _walk_paths: "Returns every file below the root, pruning the always-skipped folders and the extra folders that apply outside git: build, dist, target, vendor, env and coverage."
+  read_text: Returns a file's text, or None if it cannot be read or looks binary.
+tests/conftest.py:
+  py_app: Returns the path of the Python fixture repo.
+  ts_app: Returns the path of the TypeScript fixture repo.
+  mixed: Returns the path of the fixture repo with a written tour.
+  min_template: Returns the path of the minimal HTML template.
+  analyze_snippet: Runs the analyzer for a path on given text in a pretend repo and returns the facts.
+tests/test_build.py:
+  test_key_sets_written_mode: Checks that written-mode data has exactly the documented keys at every level and can
+    be dumped to JSON.
+  test_key_sets_auto_mode: Checks auto-mode keys, no stories or guide, and only placeholder problems.
+  test_built_at_has_local_offset_and_no_zone_name: Checks built_at looks like 'YYYY-MM-DD HH:MM +HH:MM'.
+  test_auto_mode_parts_and_no_placement_warnings: Checks part names, ids and folders in auto mode and that the only
+    warning is the syntax error.
+  test_auto_mode_looks_through_src: Checks that src/pkg becomes part 'pkg' while docs and root files get their own
+    parts.
+  test_written_mode_warnings_cover_every_kind: Checks that the mixed fixture produces each kind of warning.
+  test_written_mode_placement_and_notes: Checks first-problem-wins placement, the Not yet placed problem, the _file
+    note, item notes, story links and part file counts.
+  test_used_by_and_part_links: Checks used_by for one file and the count of imports between two parts.
+  test_hard_errors_name_file_and_key: Checks that each bad fixture raises a one-line ConfigError naming .repotour/
+    and the key.
+tests/test_cli.py:
+  test_version: Checks --version prints the version and exits 0.
+  test_scan_json_entries: Checks the keys and values of a scan --json entry, and that YAML files have no outline.
+  test_scan_files_only: Checks --files-only in plain and JSON form.
+  test_scan_human_listing: Checks the text listing includes a file path and a signature.
+  test_check_exit_codes: Checks check returns 1 with warnings on stderr and 0 for a clean repo.
+  test_hard_error_exits_2_with_one_line: Checks a config error gives exit code 2 and one stderr line naming file
+    and key.
+  test_missing_folder_exits_2: Checks a missing folder gives exit code 2.
+  test_build_writes_html_and_strict: Checks build writes the HTML with the data in place and --strict returns 1
+    for warnings.
+  test_build_default_output_path: Checks build writes .repotour/tour.html by default.
+  test_render_escapes_script_end: Checks </script> in the data is escaped in the HTML.
+  test_init_writes_starter_files_that_build: Checks init output, refusal to overwrite, --force, and that the starter
+    files pass check.
+  test_install_skill_copies_package_skill: Checks install-skill --project copies SKILL.md, or exits 2 if the package
+    has no skill.
+  test_install_skill_user: Checks install-skill --user writes under the home folder when it succeeds.
+tests/test_globs.py:
+  test_star_does_not_cross_folders: Checks * matches within one folder only.
+  test_double_star_any_depth_including_none: Checks ** matches zero or more folders.
+  test_pattern_without_slash_matches_file_name_anywhere: Checks a pattern with no slash matches a file name at any
+    depth.
+  test_braces_and_classes: Checks brace expansion and [0-9] classes.
+  test_trailing_slash_means_everything_below: Checks a trailing slash matches everything under the folder.
+  test_case_insensitive_option: Checks matching ignores case only when asked.
+  test_is_pattern: Checks is_pattern separates patterns from plain paths.
+tests/test_javascript_analyzer.py:
+  test_lexer_blanks_comments_strings_templates_and_keeps_layout: Checks the lexer keeps length and newlines, blanks
+    literals and remembers string text.
+  test_fake_import_in_string_and_fake_function_in_comment_are_ignored: Checks code-like text in strings and comments
+    is not read as code.
+  test_outline_forms: Checks the outline for functions, arrows, classes, types, default exports and export lists.
+  test_import_forms_and_libs: Checks each import form, imported names and library names.
+  test_tsconfig_paths_alias_and_base_url: Checks alias and baseUrl imports resolve in the ts_app fixture.
+  test_js_specifier_resolves_to_ts_file: Checks a .js specifier resolves to a .ts file and libraries are listed.
+  test_ts_app_fixture_outline: Checks nested helpers, exports, methods, constants, tables and calls in the ts_app
+    fixture.
+  test_reexport_only_index_gets_helper_role: Checks a re-export-only index gets the helper role and other files
+    their usual roles.
+  test_header_comment_forms: Checks // lines and a /** */ block are both read as a header.
+tests/test_python_analyzer.py:
+  item_names: Returns the names of a list of items.
+  test_docstring_first_paragraph_is_header: Checks only the first docstring paragraph becomes the header.
+  test_comment_header_after_shebang_and_encoding: Checks a comment header is read after shebang and encoding lines.
+  test_class_methods_and_signatures: Checks class signature with bases, and method names and signatures including
+    async.
+  test_long_annotations_are_dropped: Checks a long annotation is removed and a short one kept.
+  test_private_helper_used_once_becomes_child: Checks a private helper used once nests under its user and is not
+    listed in calls.
+  test_private_helper_used_twice_stays_top_level: Checks a helper used by two items stays at the top level and shows
+    in calls.
+  test_reference_cycle_is_broken: Checks two private functions calling each other nest one way and none is lost.
+  test_function_table_is_an_item_and_owns_private_handlers: Checks a dict of functions is a table item that owns
+    its private handler.
+  test_dict_without_functions_is_a_constant_not_a_table: Checks a dict with no function names is only a constant
+    if upper-case.
+  test_exported_respects_underscore_and_dunder_all: Checks exported follows __all__ and the leading underscore.
+  test_syntax_error_lists_file_without_outline: Checks a syntax error gives no outline and a warning naming the
+    file.
+  test_imports_absolute_relative_and_libs: Checks absolute, relative, submodule and function-level imports and the
+    library list.
+  test_py_app_fixture_outline: Checks nesting, tables, syntax error, roles and used_by on the py_app fixture.
+tests/test_roles.py:
+  test_default_rules_in_order: Checks a sample path for each default role.
+  test_patterns_are_case_insensitive: Checks an upper-case path still gets its role.
+  test_user_rules_win: Checks a user rule beats the default rules.
+  test_index_is_helper_only_when_it_just_reexports: Checks index.ts is a helper only when it only re-exports.
+  test_merge_roles_adds_and_overrides: Checks custom roles replace same-id roles and new ones go last.
+tests/test_scan.py:
+  write: Writes a file, creating its folders.
+  test_default_skips_and_suffixes: Checks skipped folders, lock files, minified files and unknown suffixes are left
+    out.
+  test_include_and_exclude: Checks exclude and include patterns.
+  test_large_files_are_skipped_with_warning: Checks a file over 1 MB is skipped with a warning.
+  test_git_ignored_files_are_left_out: Checks files ignored by git are not scanned.
+  test_scan_include_exclude_come_from_tour_yaml: Checks scan.exclude in tour.yaml removes files from the build.
+  test_three_thousand_files_build_quickly: Checks that a build of 3000 files finishes in under 20 seconds.
+tests/test_analyzers_fixes.py:
+  _file: "Regression tests for the analyzers: outline sharing, Python overloads and conditional definitions, header extraction, TypeScript exports, signatures and overloads, and tsconfig lookup."
+tests/test_engine_fixes.py:
+  _file: "Regression tests for the engine: literal glob file names, skip folders in and out of git, render and install failures, notes coverage warnings and empty-field warnings."
+tests/test_security.py:
+  _file: "Regression tests for untrusted repo content: symbolic links out of the repo, text that could end the page script tag, and part colours that could inject CSS."
+.claude-plugin/marketplace.json:
+  _file: "Claude Code marketplace entry that lists the repotour plugin."
+.claude-plugin/plugin.json:
+  _file: "Claude Code plugin manifest: name, version, author, license and keywords."
+.github/workflows/ci.yml:
+  _file: "GitHub Actions workflow that installs the package, runs ruff, pytest and the skill sync check."
+pyproject.toml:
+  _file: "Package metadata, the repotour entry point, hatch build settings and ruff and pytest configuration."

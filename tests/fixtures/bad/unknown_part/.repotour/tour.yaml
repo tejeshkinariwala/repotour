@@ -1,0 +1,4 @@
+parts:
+  - {id: a, name: A}
+problems:
+  - {id: P1, part: nope, title: x}

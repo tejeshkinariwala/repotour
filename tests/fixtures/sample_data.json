@@ -1,0 +1,2688 @@
+{
+ "tool": {
+  "name": "RepoTour",
+  "version": "0.1.0",
+  "url": "https://example.com/repotour"
+ },
+ "mode": "written",
+ "project": {
+  "name": "Acme Shop",
+  "tagline": "A small online shop: a Python API, a shop core and a React storefront.",
+  "overview": "Acme Shop lets people browse products, fill a cart and pay.\n\nThe server is split so that web handling, shop rules and storage each live in one place. The storefront is a separate React app that only talks to the API.",
+  "repo_url": "https://github.com/acme/shop",
+  "branch": "main"
+ },
+ "built_at": "2026-09-29 14:03 +00:00",
+ "stats": {
+  "files": 40,
+  "lines": 2988,
+  "languages": {
+   "python": 28,
+   "sql": 1,
+   "typescript": 11
+  }
+ },
+ "roles": [
+  {
+   "id": "conductor",
+   "emoji": "🎬",
+   "name": "Conductor",
+   "meaning": "Starts things and calls other files in order: entry points, CLIs, servers, scripts, build steps."
+  },
+  {
+   "id": "rulebook",
+   "emoji": "📐",
+   "name": "Rulebook",
+   "meaning": "Defines what things must look like: types, schemas, interfaces, base classes, constants, registries. Does little work itself."
+  },
+  {
+   "id": "worker",
+   "emoji": "⚙️",
+   "name": "Worker",
+   "meaning": "Does the actual work: the core logic, algorithms and transformations."
+  },
+  {
+   "id": "guard",
+   "emoji": "🛡️",
+   "name": "Guard",
+   "meaning": "Checks something and refuses or stops when it is wrong: validation, auth, permissions, limits."
+  },
+  {
+   "id": "storekeeper",
+   "emoji": "📦",
+   "name": "Storekeeper",
+   "meaning": "Saves and loads data: databases, caches, files, queues, migrations."
+  },
+  {
+   "id": "courier",
+   "emoji": "🔌",
+   "name": "Courier",
+   "meaning": "Talks to the outside world: HTTP clients, API adapters, SDK wrappers, messaging."
+  },
+  {
+   "id": "analyst",
+   "emoji": "🔍",
+   "name": "Analyst",
+   "meaning": "Measures and reports: metrics, logging, statistics, reports, charts."
+  },
+  {
+   "id": "face",
+   "emoji": "🖼️",
+   "name": "Face",
+   "meaning": "What a user sees: UI components, pages, views, templates, styles."
+  },
+  {
+   "id": "config",
+   "emoji": "🗂️",
+   "name": "Settings",
+   "meaning": "A file of settings or records that code reads."
+  },
+  {
+   "id": "helper",
+   "emoji": "🧩",
+   "name": "Helper",
+   "meaning": "Small shared utilities and package markers."
+  },
+  {
+   "id": "test",
+   "emoji": "🧪",
+   "name": "Test",
+   "meaning": "Automated test that checks other files still behave as before."
+  }
+ ],
+ "parts": [
+  {
+   "id": "api",
+   "name": "API layer",
+   "role": "Turns HTTP requests into calls on the core",
+   "summary": "The API layer receives web requests, checks who is asking and that the body looks right, then hands the work to the core. It never decides prices or stock rules itself. It only shapes the answer back into JSON.",
+   "folders": [
+    "src/api/"
+   ],
+   "color": "#3b82f6",
+   "problems": [
+    "A1",
+    "A2",
+    "A3"
+   ],
+   "files": 8,
+   "lines": 688
+  },
+  {
+   "id": "core",
+   "name": "Shop core",
+   "role": "The rules of the shop: carts, prices, checkout",
+   "summary": "Everything the shop actually does lives here. Adding to a cart, working out the total, reserving stock and charging a card are plain functions with no knowledge of HTTP.",
+   "folders": [
+    "src/core/",
+    "src/integrations/",
+    "src/config.py"
+   ],
+   "color": "#10b981",
+   "problems": [
+    "C1",
+    "C2",
+    "C3",
+    "C4",
+    "C5"
+   ],
+   "files": 15,
+   "lines": 1246
+  },
+  {
+   "id": "store",
+   "name": "Data store",
+   "role": "Saves and loads products, carts and orders",
+   "summary": "One small layer owns every SQL statement. The core asks for a product or saves an order and never sees a connection.",
+   "folders": [
+    "src/db/"
+   ],
+   "color": "#f59e0b",
+   "problems": [
+    "D1",
+    "D2"
+   ],
+   "files": 6,
+   "lines": 418
+  },
+  {
+   "id": "web",
+   "name": "Web app",
+   "role": "The pages a shopper clicks through",
+   "summary": "A React single-page app: product list, cart, checkout. It talks to the API through one typed client.",
+   "folders": [
+    "web/"
+   ],
+   "color": "#a855f7",
+   "problems": [
+    "W1",
+    "W2",
+    "W3"
+   ],
+   "files": 11,
+   "lines": 636
+  }
+ ],
+ "part_links": [
+  {
+   "from": "api",
+   "to": "core",
+   "imports": 8
+  },
+  {
+   "from": "core",
+   "to": "store",
+   "imports": 5
+  },
+  {
+   "from": "store",
+   "to": "core",
+   "imports": 1
+  }
+ ],
+ "problems": [
+  {
+   "id": "A1",
+   "part": "api",
+   "title": "Every request needs the same setup before any handler runs",
+   "without": "Each route would repeat logging, login checks and error handling, and they would drift apart.",
+   "fix": "app.py builds the app once and installs middleware.py, so every route gets logging and the login check for free.",
+   "files": [
+    "src/api/app.py",
+    "src/api/middleware.py"
+   ],
+   "tests": [
+    "tests/api/test_products.py"
+   ],
+   "placeholder": false
+  },
+  {
+   "id": "A2",
+   "part": "api",
+   "title": "Shoppers need a URL for each thing they can do",
+   "without": "Without routes the core functions cannot be reached from a browser.",
+   "fix": "One router file per area (products, cart, orders). Each handler is a few lines that call the core and shape the result.",
+   "files": [
+    "src/api/routes/products.py",
+    "src/api/routes/cart.py",
+    "src/api/routes/orders.py"
+   ],
+   "tests": [],
+   "placeholder": false
+  },
+  {
+   "id": "A3",
+   "part": "api",
+   "title": "Clients and the server must agree on the shape of the data",
+   "without": "A typo in a field name would only show up as a broken page.",
+   "fix": "schemas.py declares every body once and rejects bad input; pagination.py keeps list responses uniform.",
+   "files": [
+    "src/api/schemas.py",
+    "src/api/pagination.py"
+   ],
+   "tests": [],
+   "placeholder": false
+  },
+  {
+   "id": "C1",
+   "part": "core",
+   "title": "Failures need one vocabulary, and settings one home",
+   "without": "Random exceptions become 500 errors and settings get read in twenty places.",
+   "fix": "errors.py defines the deliberate errors, auth.py signs and checks tokens, config.py reads settings once.",
+   "files": [
+    "src/core/errors.py",
+    "src/core/auth.py",
+    "src/config.py"
+   ],
+   "tests": [],
+   "placeholder": false
+  },
+  {
+   "id": "C2",
+   "part": "core",
+   "title": "Shoppers must be able to find products",
+   "without": "A long list with no search is unusable past a few dozen items.",
+   "fix": "catalog.py ranks products by name and tag matches and returns one page at a time.",
+   "files": [
+    "src/core/catalog.py"
+   ],
+   "tests": [],
+   "placeholder": false
+  },
+  {
+   "id": "C3",
+   "part": "core",
+   "title": "A cart total must be right, every time",
+   "without": "Rounding, stock limits and promo codes would give different totals on different pages.",
+   "fix": "cart.py owns the rules for changing a cart; pricing.py is the only place that computes money.",
+   "files": [
+    "src/core/cart.py",
+    "src/core/pricing.py"
+   ],
+   "tests": [
+    "tests/test_cart.py",
+    "tests/test_pricing.py"
+   ],
+   "placeholder": false
+  },
+  {
+   "id": "C4",
+   "part": "core",
+   "title": "Placing an order touches many systems and must not half-happen",
+   "without": "If the card is charged but the order is not saved, the shopper pays for nothing.",
+   "fix": "checkout.py runs the steps in order and undoes stock holds on failure; payments.py and mailer.py wrap the outside services.",
+   "files": [
+    "src/core/checkout.py",
+    "src/core/orders.py",
+    "src/core/notify.py",
+    "src/integrations/payments.py",
+    "src/integrations/mailer.py"
+   ],
+   "tests": [
+    "tests/test_checkout.py"
+   ],
+   "placeholder": false
+  },
+  {
+   "id": "C5",
+   "part": "core",
+   "title": "The team needs to see how the shop is doing",
+   "without": "Without counters, problems are found by shoppers first.",
+   "fix": "metrics.py counts orders and failures and exposes a snapshot.",
+   "files": [
+    "src/core/metrics.py"
+   ],
+   "tests": [],
+   "placeholder": false
+  },
+  {
+   "id": "D1",
+   "part": "store",
+   "title": "The database must exist and be reachable",
+   "without": "Each module would open its own connection and disagree about the schema.",
+   "fix": "connection.py shares one connection with transactions; tables.py and the migration create the schema.",
+   "files": [
+    "src/db/connection.py",
+    "src/db/tables.py",
+    "src/db/migrations/0001_initial.sql"
+   ],
+   "tests": [],
+   "placeholder": false
+  },
+  {
+   "id": "D2",
+   "part": "store",
+   "title": "The core should not know SQL",
+   "without": "SQL scattered through business code is hard to change and hard to test.",
+   "fix": "One module per kind of record: products, carts, orders.",
+   "files": [
+    "src/db/products.py",
+    "src/db/carts.py",
+    "src/db/orders.py"
+   ],
+   "tests": [],
+   "placeholder": false
+  },
+  {
+   "id": "W1",
+   "part": "web",
+   "title": "The app has to start and be built",
+   "without": "",
+   "fix": "main.tsx mounts the app, App.tsx picks the page, vite.config.ts builds it.",
+   "files": [
+    "web/src/main.tsx",
+    "web/src/App.tsx",
+    "web/vite.config.ts"
+   ],
+   "tests": [],
+   "placeholder": false
+  },
+  {
+   "id": "W2",
+   "part": "web",
+   "title": "Pages should not each talk to the server their own way",
+   "without": "Every page would parse errors and hold its own copy of the cart.",
+   "fix": "client.ts is the one place that calls the API; useCart.ts shares cart state.",
+   "files": [
+    "web/src/api/client.ts",
+    "web/src/types.ts",
+    "web/src/hooks/useCart.ts"
+   ],
+   "tests": [
+    "web/src/hooks/useCart.test.ts"
+   ],
+   "placeholder": false
+  },
+  {
+   "id": "W3",
+   "part": "web",
+   "title": "Shoppers need screens for browsing, the cart and paying",
+   "without": "",
+   "fix": "One page component per screen plus a small Money component for prices.",
+   "files": [
+    "web/src/pages/ProductList.tsx",
+    "web/src/pages/CartPage.tsx",
+    "web/src/pages/CheckoutPage.tsx",
+    "web/src/components/Money.tsx"
+   ],
+   "tests": [],
+   "placeholder": false
+  }
+ ],
+ "stories": [
+  {
+   "id": "S1",
+   "act": "Act 1: Serve a shopper",
+   "title": "A shopper searches for a product",
+   "command": "curl 'localhost:8000/products?q=mug'",
+   "summary": "A search text goes in; one ranked page of products comes out.",
+   "steps": [
+    {
+     "text": "The app starts, mounts the routers and logs every request.",
+     "files": [
+      "src/api/app.py",
+      "src/api/middleware.py"
+     ]
+    },
+    {
+     "text": "The products router reads the search text and page number.",
+     "files": [
+      "src/api/routes/products.py"
+     ]
+    },
+    {
+     "text": "The catalog scores each product against the words in the search.",
+     "files": [
+      "src/core/catalog.py"
+     ]
+    },
+    {
+     "text": "The database layer returns the matching rows.",
+     "files": [
+      "src/db/products.py",
+      "src/db/connection.py"
+     ]
+    },
+    {
+     "text": "The response is shaped by the ProductOut schema.",
+     "files": [
+      "src/api/schemas.py"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "S2",
+   "act": "Act 1: Serve a shopper",
+   "title": "A shopper adds an item to the cart",
+   "command": "curl -X POST localhost:8000/cart/items -d '{\"product_id\": 7, \"quantity\": 2}'",
+   "summary": "The cart rules check stock and update the saved cart.",
+   "steps": [
+    {
+     "text": "The login check runs before the handler.",
+     "files": [
+      "src/api/middleware.py",
+      "src/core/auth.py"
+     ]
+    },
+    {
+     "text": "The cart route validates the body.",
+     "files": [
+      "src/api/routes/cart.py",
+      "src/api/schemas.py"
+     ]
+    },
+    {
+     "text": "The core checks stock and changes the cart.",
+     "files": [
+      "src/core/cart.py",
+      "src/db/products.py"
+     ]
+    },
+    {
+     "text": "The new cart is saved.",
+     "files": [
+      "src/db/carts.py"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "S3",
+   "act": "Act 2: Take the money",
+   "title": "A shopper checks out",
+   "command": "npm --prefix web run dev",
+   "summary": "From the checkout form to a saved order and an emailed receipt.",
+   "steps": [
+    {
+     "text": "The checkout page collects the address and card token.",
+     "files": [
+      "web/src/pages/CheckoutPage.tsx"
+     ]
+    },
+    {
+     "text": "The client sends the order to the API.",
+     "files": [
+      "web/src/api/client.ts"
+     ]
+    },
+    {
+     "text": "The orders route hands the cart to checkout.",
+     "files": [
+      "src/api/routes/orders.py"
+     ]
+    },
+    {
+     "text": "Checkout prices the cart, holds stock and charges the card.",
+     "files": [
+      "src/core/checkout.py",
+      "src/core/pricing.py",
+      "src/integrations/payments.py"
+     ]
+    },
+    {
+     "text": "The order is saved and a receipt is sent.",
+     "files": [
+      "src/db/orders.py",
+      "src/core/notify.py",
+      "src/integrations/mailer.py"
+     ]
+    }
+   ]
+  }
+ ],
+ "guide": [
+  {
+   "text": "Start with the map: four parts, one job each.",
+   "story": null,
+   "part": null
+  },
+  {
+   "text": "follow a search from URL to database.",
+   "story": "S1",
+   "part": null
+  },
+  {
+   "text": "read the rules of the shop.",
+   "story": null,
+   "part": "core"
+  },
+  {
+   "text": "see how money moves.",
+   "story": "S3",
+   "part": null
+  },
+  {
+   "text": "finish with the storefront.",
+   "story": null,
+   "part": "web"
+  }
+ ],
+ "files": {
+  "src/api/app.py": {
+   "lang": "python",
+   "lines": 84,
+   "purpose": "Builds the web application and wires routes, middleware and error handlers together.",
+   "role": "conductor",
+   "problem": "A1",
+   "part": "api",
+   "stories": [
+    "S1"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "create_app",
+      "kind": "function",
+      "line": 12,
+      "signature": "create_app(settings=None)",
+      "note": "Builds the app object, registers middleware and routes, and returns it.",
+      "exported": true,
+      "calls": [
+       "register_routes",
+       "install_error_handlers"
+      ],
+      "children": [
+       {
+        "name": "_load_settings",
+        "kind": "function",
+        "line": 40,
+        "signature": "_load_settings(settings)",
+        "note": "Falls back to environment settings when none are passed.",
+        "exported": false
+       }
+      ]
+     },
+     {
+      "name": "register_routes",
+      "kind": "function",
+      "line": 48,
+      "signature": "register_routes(app)",
+      "note": "Mounts every router under its URL prefix.",
+      "exported": true,
+      "calls": [
+       "ROUTERS"
+      ]
+     },
+     {
+      "name": "install_error_handlers",
+      "kind": "function",
+      "line": 66,
+      "signature": "install_error_handlers(app)",
+      "note": "Turns domain errors into JSON responses with the right status code.",
+      "exported": true
+     },
+     {
+      "name": "ROUTERS",
+      "kind": "table",
+      "line": 78,
+      "signature": "ROUTERS = [...]",
+      "note": "List of routers mounted at startup, in order.",
+      "exported": true
+     }
+    ],
+    "consts": [
+     "DEFAULT_PORT"
+    ]
+   },
+   "imports": [
+    {
+     "file": "src/api/routes/products.py",
+     "names": [
+      "router"
+     ]
+    },
+    {
+     "file": "src/api/routes/cart.py",
+     "names": [
+      "router"
+     ]
+    },
+    {
+     "file": "src/api/routes/orders.py",
+     "names": [
+      "router"
+     ]
+    },
+    {
+     "file": "src/api/middleware.py",
+     "names": [
+      "RequestLogger",
+      "require_login"
+     ]
+    },
+    {
+     "file": "src/core/errors.py",
+     "names": [
+      "ShopError"
+     ]
+    },
+    {
+     "file": "src/config.py",
+     "names": [
+      "Settings"
+     ]
+    }
+   ],
+   "libs": [
+    "fastapi"
+   ],
+   "used_by": [
+    "tests/api/test_products.py"
+   ]
+  },
+  "src/api/middleware.py": {
+   "lang": "python",
+   "lines": 70,
+   "purpose": "Request logging and the login check that runs before protected routes.",
+   "role": "guard",
+   "problem": "A1",
+   "part": "api",
+   "stories": [
+    "S1",
+    "S2"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "RequestLogger",
+      "kind": "class",
+      "line": 9,
+      "signature": "class RequestLogger",
+      "note": "Logs method, path, status and time for each request.",
+      "exported": true,
+      "methods": [
+       {
+        "name": "__init__",
+        "line": 10,
+        "signature": "__init__(self, app)",
+        "note": "Stores the wrapped app."
+       },
+       {
+        "name": "__call__",
+        "line": 14,
+        "signature": "__call__(self, scope, receive, send)",
+        "note": "Times the request and writes one log line."
+       }
+      ]
+     },
+     {
+      "name": "require_login",
+      "kind": "function",
+      "line": 41,
+      "signature": "require_login(request)",
+      "note": "Rejects the request with 401 when there is no valid session.",
+      "exported": true,
+      "calls": [
+       "_read_token"
+      ],
+      "children": [
+       {
+        "name": "_read_token",
+        "kind": "function",
+        "line": 55,
+        "signature": "_read_token(request)",
+        "note": "Pulls the bearer token out of the Authorization header.",
+        "exported": false
+       }
+      ]
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "src/core/auth.py",
+     "names": [
+      "verify_token"
+     ]
+    },
+    {
+     "file": "src/core/errors.py",
+     "names": [
+      "AuthError"
+     ]
+    }
+   ],
+   "libs": [
+    "logging",
+    "time"
+   ],
+   "used_by": [
+    "src/api/app.py",
+    "src/api/routes/cart.py",
+    "src/api/routes/orders.py"
+   ]
+  },
+  "src/api/routes/products.py": {
+   "lang": "python",
+   "lines": 96,
+   "purpose": "Endpoints to list, search and show products.",
+   "role": "conductor",
+   "problem": "A2",
+   "part": "api",
+   "stories": [
+    "S1"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "list_products",
+      "kind": "function",
+      "line": 14,
+      "signature": "list_products(q=None, page=1)",
+      "note": "Returns one page of products, optionally filtered by a search text.",
+      "exported": true,
+      "calls": [
+       "_page_bounds"
+      ]
+     },
+     {
+      "name": "get_product",
+      "kind": "function",
+      "line": 38,
+      "signature": "get_product(product_id)",
+      "note": "Returns one product or a 404 error.",
+      "exported": true
+     },
+     {
+      "name": "_page_bounds",
+      "kind": "function",
+      "line": 60,
+      "signature": "_page_bounds(page, size=20)",
+      "note": "Turns a page number into start and end positions.",
+      "exported": false
+     },
+     {
+      "name": "router",
+      "kind": "table",
+      "line": 80,
+      "signature": "router = Router(...)",
+      "note": "Maps URLs to the handlers above.",
+      "exported": true
+     }
+    ],
+    "consts": [
+     "PAGE_SIZE"
+    ]
+   },
+   "imports": [
+    {
+     "file": "src/core/catalog.py",
+     "names": [
+      "search_products",
+      "find_product"
+     ]
+    },
+    {
+     "file": "src/api/schemas.py",
+     "names": [
+      "ProductOut"
+     ]
+    }
+   ],
+   "libs": [
+    "fastapi"
+   ],
+   "used_by": [
+    "src/api/app.py"
+   ]
+  },
+  "src/api/routes/cart.py": {
+   "lang": "python",
+   "lines": 110,
+   "purpose": "Endpoints to add, change and clear items in a shopper's cart.",
+   "role": "conductor",
+   "problem": "A2",
+   "part": "api",
+   "stories": [
+    "S2"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "add_item",
+      "kind": "function",
+      "line": 15,
+      "signature": "add_item(body: AddItem, user)",
+      "note": "Adds a product to the cart and returns the new totals.",
+      "exported": true,
+      "calls": [
+       "_totals"
+      ]
+     },
+     {
+      "name": "update_quantity",
+      "kind": "function",
+      "line": 41,
+      "signature": "update_quantity(item_id, body, user)",
+      "note": "Changes the quantity, or removes the line when it reaches zero.",
+      "exported": true,
+      "calls": [
+       "_totals"
+      ]
+     },
+     {
+      "name": "clear_cart",
+      "kind": "function",
+      "line": 68,
+      "signature": "clear_cart(user)",
+      "note": "Empties the cart.",
+      "exported": true
+     },
+     {
+      "name": "_totals",
+      "kind": "function",
+      "line": 82,
+      "signature": "_totals(cart)",
+      "note": "Builds the totals block shown in every cart response.",
+      "exported": false
+     },
+     {
+      "name": "router",
+      "kind": "table",
+      "line": 100,
+      "signature": "router = Router(...)",
+      "note": "Maps URLs to the handlers above.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "src/core/cart.py",
+     "names": [
+      "Cart",
+      "apply_change"
+     ]
+    },
+    {
+     "file": "src/api/schemas.py",
+     "names": [
+      "AddItem",
+      "CartOut"
+     ]
+    },
+    {
+     "file": "src/api/middleware.py",
+     "names": [
+      "require_login"
+     ]
+    }
+   ],
+   "libs": [
+    "fastapi"
+   ],
+   "used_by": [
+    "src/api/app.py"
+   ]
+  },
+  "src/api/routes/orders.py": {
+   "lang": "python",
+   "lines": 132,
+   "purpose": "Endpoints to place an order and read past orders.",
+   "role": "conductor",
+   "problem": "A2",
+   "part": "api",
+   "stories": [
+    "S3"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "place_order",
+      "kind": "function",
+      "line": 18,
+      "signature": "place_order(body: CheckoutIn, user)",
+      "note": "Turns the cart into an order, charges the card and returns the receipt.",
+      "exported": true,
+      "calls": [
+       "_receipt"
+      ]
+     },
+     {
+      "name": "list_orders",
+      "kind": "function",
+      "line": 58,
+      "signature": "list_orders(user)",
+      "note": "Returns the shopper's past orders, newest first.",
+      "exported": true
+     },
+     {
+      "name": "get_order",
+      "kind": "function",
+      "line": 77,
+      "signature": "get_order(order_id, user)",
+      "note": "Returns one order if it belongs to the shopper.",
+      "exported": true
+     },
+     {
+      "name": "_receipt",
+      "kind": "function",
+      "line": 96,
+      "signature": "_receipt(order)",
+      "note": "Shapes an order into the receipt sent back to the client.",
+      "exported": false
+     },
+     {
+      "name": "router",
+      "kind": "table",
+      "line": 120,
+      "signature": "router = Router(...)",
+      "note": "Maps URLs to the handlers above.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "src/core/checkout.py",
+     "names": [
+      "checkout"
+     ]
+    },
+    {
+     "file": "src/core/orders.py",
+     "names": [
+      "load_orders",
+      "load_order"
+     ]
+    },
+    {
+     "file": "src/api/schemas.py",
+     "names": [
+      "CheckoutIn",
+      "OrderOut"
+     ]
+    },
+    {
+     "file": "src/api/middleware.py",
+     "names": [
+      "require_login"
+     ]
+    }
+   ],
+   "libs": [
+    "fastapi"
+   ],
+   "used_by": [
+    "src/api/app.py"
+   ]
+  },
+  "src/api/schemas.py": {
+   "lang": "python",
+   "lines": 88,
+   "purpose": "Shapes of the JSON bodies going in and out of the API.",
+   "role": "rulebook",
+   "problem": "A3",
+   "part": "api",
+   "stories": [
+    "S1",
+    "S2"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "ProductOut",
+      "kind": "class",
+      "line": 8,
+      "signature": "class ProductOut(BaseModel)",
+      "note": "Product as sent to clients.",
+      "exported": true
+     },
+     {
+      "name": "AddItem",
+      "kind": "class",
+      "line": 20,
+      "signature": "class AddItem(BaseModel)",
+      "note": "Body for adding a product to the cart.",
+      "exported": true,
+      "methods": [
+       {
+        "name": "quantity_positive",
+        "line": 26,
+        "signature": "quantity_positive(cls, v)",
+        "note": "Rejects zero and negative quantities."
+       }
+      ]
+     },
+     {
+      "name": "CartOut",
+      "kind": "class",
+      "line": 38,
+      "signature": "class CartOut(BaseModel)",
+      "note": "Cart with lines and totals.",
+      "exported": true
+     },
+     {
+      "name": "CheckoutIn",
+      "kind": "class",
+      "line": 52,
+      "signature": "class CheckoutIn(BaseModel)",
+      "note": "Body for placing an order: address and payment token.",
+      "exported": true
+     },
+     {
+      "name": "OrderOut",
+      "kind": "class",
+      "line": 70,
+      "signature": "class OrderOut(BaseModel)",
+      "note": "Order as sent to clients.",
+      "exported": true
+     }
+    ],
+    "consts": [
+     "MAX_NOTE_LENGTH"
+    ]
+   },
+   "imports": [],
+   "libs": [
+    "pydantic"
+   ],
+   "used_by": [
+    "src/api/routes/cart.py",
+    "src/api/routes/orders.py",
+    "src/api/routes/products.py"
+   ]
+  },
+  "src/api/pagination.py": {
+   "lang": "python",
+   "lines": 44,
+   "purpose": "Small helpers for page numbers and page-size limits.",
+   "role": "helper",
+   "problem": "A3",
+   "part": "api",
+   "stories": [],
+   "outline": {
+    "items": [
+     {
+      "name": "clamp_page_size",
+      "kind": "function",
+      "line": 8,
+      "signature": "clamp_page_size(size)",
+      "note": "Keeps the page size between 1 and 100.",
+      "exported": true
+     },
+     {
+      "name": "page_links",
+      "kind": "function",
+      "line": 20,
+      "signature": "page_links(url, page, total)",
+      "exported": true
+     }
+    ],
+    "consts": [
+     "MAX_PAGE_SIZE"
+    ]
+   },
+   "imports": [],
+   "libs": [],
+   "used_by": []
+  },
+  "src/core/errors.py": {
+   "lang": "python",
+   "lines": 36,
+   "purpose": "The error types the rest of the code raises and the API turns into responses.",
+   "role": "rulebook",
+   "problem": "C1",
+   "part": "core",
+   "stories": [],
+   "outline": {
+    "items": [
+     {
+      "name": "ShopError",
+      "kind": "class",
+      "line": 6,
+      "signature": "class ShopError(Exception)",
+      "note": "Base class for every error we raise on purpose.",
+      "exported": true
+     },
+     {
+      "name": "AuthError",
+      "kind": "class",
+      "line": 14,
+      "signature": "class AuthError(ShopError)",
+      "note": "Missing or invalid login.",
+      "exported": true
+     },
+     {
+      "name": "OutOfStock",
+      "kind": "class",
+      "line": 20,
+      "signature": "class OutOfStock(ShopError)",
+      "note": "Not enough stock for the requested quantity.",
+      "exported": true
+     },
+     {
+      "name": "PaymentDeclined",
+      "kind": "class",
+      "line": 28,
+      "signature": "class PaymentDeclined(ShopError)",
+      "note": "The card was refused.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [],
+   "libs": [],
+   "used_by": [
+    "src/api/app.py",
+    "src/api/middleware.py",
+    "src/core/auth.py",
+    "src/core/cart.py",
+    "src/core/catalog.py",
+    "src/core/checkout.py",
+    "src/core/orders.py",
+    "src/integrations/payments.py",
+    "tests/test_checkout.py"
+   ]
+  },
+  "src/core/catalog.py": {
+   "lang": "python",
+   "lines": 102,
+   "purpose": "Finds products by text and looks up single products.",
+   "role": "worker",
+   "problem": "C2",
+   "part": "core",
+   "stories": [
+    "S1"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "search_products",
+      "kind": "function",
+      "line": 14,
+      "signature": "search_products(text, page=1)",
+      "note": "Ranks products by how well their name and tags match the text.",
+      "exported": true,
+      "calls": [
+       "_score"
+      ],
+      "children": [
+       {
+        "name": "_score",
+        "kind": "function",
+        "line": 50,
+        "signature": "_score(product, words)",
+        "note": "Counts word hits, with name hits worth more than tag hits.",
+        "exported": false,
+        "calls": [
+         "_tokenize"
+        ]
+       },
+       {
+        "name": "_tokenize",
+        "kind": "function",
+        "line": 70,
+        "signature": "_tokenize(text)",
+        "note": "Lowercases and splits text into words.",
+        "exported": false
+       }
+      ]
+     },
+     {
+      "name": "find_product",
+      "kind": "function",
+      "line": 84,
+      "signature": "find_product(product_id)",
+      "note": "Loads one product or raises ShopError.",
+      "exported": true
+     }
+    ],
+    "consts": [
+     "NAME_WEIGHT"
+    ]
+   },
+   "imports": [
+    {
+     "file": "src/db/products.py",
+     "names": [
+      "fetch_products",
+      "fetch_product"
+     ]
+    },
+    {
+     "file": "src/core/errors.py",
+     "names": [
+      "ShopError"
+     ]
+    }
+   ],
+   "libs": [],
+   "used_by": [
+    "src/api/routes/products.py"
+   ]
+  },
+  "src/core/cart.py": {
+   "lang": "python",
+   "lines": 128,
+   "purpose": "The cart: what is in it and the rules for changing it.",
+   "role": "worker",
+   "problem": "C3",
+   "part": "core",
+   "stories": [
+    "S2"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "Cart",
+      "kind": "class",
+      "line": 12,
+      "signature": "class Cart",
+      "note": "Holds cart lines and works out totals.",
+      "exported": true,
+      "methods": [
+       {
+        "name": "add",
+        "line": 20,
+        "signature": "add(self, product_id, qty)",
+        "note": "Adds quantity, merging with an existing line."
+       },
+       {
+        "name": "remove",
+        "line": 34,
+        "signature": "remove(self, product_id)",
+        "note": "Deletes a line."
+       },
+       {
+        "name": "total",
+        "line": 48,
+        "signature": "total(self)",
+        "note": "Sum of line prices before tax and shipping."
+       }
+      ]
+     },
+     {
+      "name": "apply_change",
+      "kind": "function",
+      "line": 70,
+      "signature": "apply_change(cart, product_id, qty)",
+      "note": "Checks stock, then applies the change to the cart.",
+      "exported": true,
+      "calls": [
+       "Cart"
+      ],
+      "children": [
+       {
+        "name": "_check_stock",
+        "kind": "function",
+        "line": 95,
+        "signature": "_check_stock(product_id, qty)",
+        "note": "Raises OutOfStock when the warehouse has too few.",
+        "exported": false
+       }
+      ]
+     }
+    ],
+    "consts": [
+     "MAX_LINE_QTY"
+    ]
+   },
+   "imports": [
+    {
+     "file": "src/core/errors.py",
+     "names": [
+      "OutOfStock"
+     ]
+    },
+    {
+     "file": "src/db/products.py",
+     "names": [
+      "fetch_product"
+     ]
+    },
+    {
+     "file": "src/db/carts.py",
+     "names": [
+      "save_cart",
+      "load_cart"
+     ]
+    }
+   ],
+   "libs": [],
+   "used_by": [
+    "src/api/routes/cart.py",
+    "src/core/pricing.py",
+    "tests/test_cart.py"
+   ]
+  },
+  "src/core/pricing.py": {
+   "lang": "python",
+   "lines": 96,
+   "purpose": "Tax, discounts and shipping: turns a cart total into an amount to charge.",
+   "role": "worker",
+   "problem": "C3",
+   "part": "core",
+   "stories": [
+    "S3"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "price_cart",
+      "kind": "function",
+      "line": 10,
+      "signature": "price_cart(cart, region)",
+      "note": "Returns subtotal, discount, tax, shipping and the final amount.",
+      "exported": true,
+      "calls": [
+       "_discount",
+       "_tax",
+       "_shipping"
+      ]
+     },
+     {
+      "name": "_discount",
+      "kind": "function",
+      "line": 42,
+      "signature": "_discount(subtotal, code)",
+      "note": "Applies a promo code if it is valid and active.",
+      "exported": false
+     },
+     {
+      "name": "_tax",
+      "kind": "function",
+      "line": 58,
+      "signature": "_tax(amount, region)",
+      "note": "Looks up the tax rate for the region and applies it.",
+      "exported": false
+     },
+     {
+      "name": "_shipping",
+      "kind": "function",
+      "line": 74,
+      "signature": "_shipping(weight, region)",
+      "note": "Picks the shipping fee from the region's rate table.",
+      "exported": false
+     },
+     {
+      "name": "TAX_RATES",
+      "kind": "table",
+      "line": 88,
+      "signature": "TAX_RATES = {...}",
+      "note": "Tax rate per region.",
+      "exported": true
+     }
+    ],
+    "consts": [
+     "FREE_SHIPPING_OVER"
+    ]
+   },
+   "imports": [
+    {
+     "file": "src/core/cart.py",
+     "names": [
+      "Cart"
+     ]
+    }
+   ],
+   "libs": [
+    "decimal"
+   ],
+   "used_by": [
+    "src/core/checkout.py",
+    "tests/test_pricing.py"
+   ]
+  },
+  "src/core/checkout.py": {
+   "lang": "python",
+   "lines": 118,
+   "purpose": "Runs the steps of checkout in order: price, reserve stock, charge, record.",
+   "role": "conductor",
+   "problem": "C4",
+   "part": "core",
+   "stories": [
+    "S3"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "checkout",
+      "kind": "function",
+      "line": 16,
+      "signature": "checkout(user, cart, address, token)",
+      "note": "Runs the whole checkout and returns the saved order.",
+      "exported": true,
+      "calls": [
+       "reserve_stock",
+       "charge_card"
+      ],
+      "children": [
+       {
+        "name": "_rollback",
+        "kind": "function",
+        "line": 80,
+        "signature": "_rollback(reservation)",
+        "note": "Releases reserved stock when a later step fails.",
+        "exported": false
+       }
+      ]
+     },
+     {
+      "name": "reserve_stock",
+      "kind": "function",
+      "line": 52,
+      "signature": "reserve_stock(cart)",
+      "note": "Holds stock for each line so nobody else can buy it.",
+      "exported": true
+     },
+     {
+      "name": "charge_card",
+      "kind": "function",
+      "line": 66,
+      "signature": "charge_card(amount, token)",
+      "note": "Charges the card through the payment gateway.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "src/core/pricing.py",
+     "names": [
+      "price_cart"
+     ]
+    },
+    {
+     "file": "src/core/errors.py",
+     "names": [
+      "OutOfStock",
+      "PaymentDeclined"
+     ]
+    },
+    {
+     "file": "src/db/orders.py",
+     "names": [
+      "save_order"
+     ]
+    },
+    {
+     "file": "src/integrations/payments.py",
+     "names": [
+      "PaymentGateway"
+     ]
+    },
+    {
+     "file": "src/core/notify.py",
+     "names": [
+      "send_receipt"
+     ]
+    }
+   ],
+   "libs": [],
+   "used_by": [
+    "src/api/routes/orders.py",
+    "tests/test_checkout.py"
+   ]
+  },
+  "src/core/orders.py": {
+   "lang": "python",
+   "lines": 64,
+   "purpose": "Reads back past orders for a shopper.",
+   "role": "worker",
+   "problem": "C4",
+   "part": "core",
+   "stories": [],
+   "outline": {
+    "items": [
+     {
+      "name": "load_orders",
+      "kind": "function",
+      "line": 9,
+      "signature": "load_orders(user)",
+      "note": "All orders for a shopper.",
+      "exported": true
+     },
+     {
+      "name": "load_order",
+      "kind": "function",
+      "line": 24,
+      "signature": "load_order(order_id, user)",
+      "note": "One order, checked to belong to the shopper.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "src/db/orders.py",
+     "names": [
+      "fetch_orders",
+      "fetch_order"
+     ]
+    },
+    {
+     "file": "src/core/errors.py",
+     "names": [
+      "AuthError"
+     ]
+    }
+   ],
+   "libs": [],
+   "used_by": [
+    "src/api/routes/orders.py"
+   ]
+  },
+  "src/core/auth.py": {
+   "lang": "python",
+   "lines": 90,
+   "purpose": "Creates and checks login tokens.",
+   "role": "guard",
+   "problem": "C1",
+   "part": "core",
+   "stories": [
+    "S2"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "issue_token",
+      "kind": "function",
+      "line": 12,
+      "signature": "issue_token(user_id)",
+      "note": "Signs a token that expires in 12 hours.",
+      "exported": true
+     },
+     {
+      "name": "verify_token",
+      "kind": "function",
+      "line": 30,
+      "signature": "verify_token(token)",
+      "note": "Returns the user id or raises AuthError.",
+      "exported": true,
+      "calls": [
+       "_decode"
+      ],
+      "children": [
+       {
+        "name": "_decode",
+        "kind": "function",
+        "line": 52,
+        "signature": "_decode(token)",
+        "note": "Splits and checks the signature.",
+        "exported": false
+       }
+      ]
+     }
+    ],
+    "consts": [
+     "TOKEN_HOURS"
+    ]
+   },
+   "imports": [
+    {
+     "file": "src/core/errors.py",
+     "names": [
+      "AuthError"
+     ]
+    },
+    {
+     "file": "src/config.py",
+     "names": [
+      "Settings"
+     ]
+    }
+   ],
+   "libs": [
+    "hmac",
+    "hashlib"
+   ],
+   "used_by": [
+    "src/api/middleware.py"
+   ]
+  },
+  "src/core/notify.py": {
+   "lang": "python",
+   "lines": 58,
+   "purpose": "Sends the order receipt email.",
+   "role": "courier",
+   "problem": "C4",
+   "part": "core",
+   "stories": [
+    "S3"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "send_receipt",
+      "kind": "function",
+      "line": 10,
+      "signature": "send_receipt(order, email)",
+      "note": "Renders and sends the receipt.",
+      "exported": true
+     },
+     {
+      "name": "_render_receipt",
+      "kind": "function",
+      "line": 34,
+      "signature": "_render_receipt(order)",
+      "note": "Builds the plain-text email body.",
+      "exported": false
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "src/integrations/mailer.py",
+     "names": [
+      "send_mail"
+     ]
+    }
+   ],
+   "libs": [],
+   "used_by": [
+    "src/core/checkout.py"
+   ]
+  },
+  "src/core/metrics.py": {
+   "lang": "python",
+   "lines": 52,
+   "purpose": "Counters for orders and failures, exported for the dashboard.",
+   "role": "analyst",
+   "problem": "C5",
+   "part": "core",
+   "stories": [],
+   "outline": {
+    "items": [
+     {
+      "name": "Counter",
+      "kind": "class",
+      "line": 8,
+      "signature": "class Counter",
+      "note": "A named number that only goes up.",
+      "exported": true,
+      "methods": [
+       {
+        "name": "inc",
+        "line": 12,
+        "signature": "inc(self, n=1)",
+        "note": "Adds to the count."
+       }
+      ]
+     },
+     {
+      "name": "record_order",
+      "kind": "function",
+      "line": 30,
+      "signature": "record_order(order)",
+      "note": "Counts an order and its value.",
+      "exported": true
+     },
+     {
+      "name": "snapshot",
+      "kind": "function",
+      "line": 42,
+      "signature": "snapshot()",
+      "note": "Returns all counters as a dict.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [],
+   "libs": [
+    "threading"
+   ],
+   "used_by": []
+  },
+  "src/config.py": {
+   "lang": "python",
+   "lines": 40,
+   "purpose": "Reads settings from environment variables with safe defaults.",
+   "role": "config",
+   "problem": "C1",
+   "part": "core",
+   "stories": [],
+   "outline": {
+    "items": [
+     {
+      "name": "Settings",
+      "kind": "class",
+      "line": 7,
+      "signature": "class Settings",
+      "note": "All configurable values in one place.",
+      "exported": true
+     }
+    ],
+    "consts": [
+     "DEFAULT_CURRENCY"
+    ]
+   },
+   "imports": [],
+   "libs": [
+    "os"
+   ],
+   "used_by": [
+    "src/api/app.py",
+    "src/core/auth.py",
+    "src/db/connection.py"
+   ]
+  },
+  "src/db/connection.py": {
+   "lang": "python",
+   "lines": 60,
+   "purpose": "Opens and shares the database connection.",
+   "role": "storekeeper",
+   "problem": "D1",
+   "part": "store",
+   "stories": [
+    "S1"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "get_connection",
+      "kind": "function",
+      "line": 10,
+      "signature": "get_connection()",
+      "note": "Returns the shared connection, opening it on first use.",
+      "exported": true,
+      "calls": [
+       "_open"
+      ],
+      "children": [
+       {
+        "name": "_open",
+        "kind": "function",
+        "line": 30,
+        "signature": "_open(url)",
+        "note": "Opens a new connection and sets the row format.",
+        "exported": false
+       }
+      ]
+     },
+     {
+      "name": "transaction",
+      "kind": "function",
+      "line": 42,
+      "signature": "transaction()",
+      "note": "Context manager that commits on success and rolls back on error.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "src/config.py",
+     "names": [
+      "Settings"
+     ]
+    }
+   ],
+   "libs": [
+    "sqlite3",
+    "contextlib"
+   ],
+   "used_by": [
+    "src/db/carts.py",
+    "src/db/orders.py",
+    "src/db/products.py"
+   ]
+  },
+  "src/db/tables.py": {
+   "lang": "python",
+   "lines": 74,
+   "purpose": "Table definitions for the schema.",
+   "role": "rulebook",
+   "problem": "D1",
+   "part": "store",
+   "stories": [],
+   "outline": {
+    "items": [
+     {
+      "name": "SCHEMA",
+      "kind": "table",
+      "line": 6,
+      "signature": "SCHEMA = [...]",
+      "note": "SQL statements that create each table, in order.",
+      "exported": true
+     },
+     {
+      "name": "create_all",
+      "kind": "function",
+      "line": 50,
+      "signature": "create_all(conn)",
+      "note": "Runs every statement in SCHEMA.",
+      "exported": true
+     }
+    ],
+    "consts": [
+     "TABLE_NAMES"
+    ]
+   },
+   "imports": [],
+   "libs": [],
+   "used_by": []
+  },
+  "src/db/products.py": {
+   "lang": "python",
+   "lines": 88,
+   "purpose": "Reads product rows.",
+   "role": "storekeeper",
+   "problem": "D2",
+   "part": "store",
+   "stories": [
+    "S1",
+    "S2"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "fetch_products",
+      "kind": "function",
+      "line": 10,
+      "signature": "fetch_products(text, limit, offset)",
+      "note": "Rows matching a search text.",
+      "exported": true
+     },
+     {
+      "name": "fetch_product",
+      "kind": "function",
+      "line": 36,
+      "signature": "fetch_product(product_id)",
+      "note": "One row or None.",
+      "exported": true
+     },
+     {
+      "name": "adjust_stock",
+      "kind": "function",
+      "line": 56,
+      "signature": "adjust_stock(product_id, delta)",
+      "note": "Adds or removes stock inside a transaction.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "src/db/connection.py",
+     "names": [
+      "get_connection",
+      "transaction"
+     ]
+    }
+   ],
+   "libs": [],
+   "used_by": [
+    "src/core/cart.py",
+    "src/core/catalog.py"
+   ]
+  },
+  "src/db/carts.py": {
+   "lang": "python",
+   "lines": 66,
+   "purpose": "Saves and loads carts.",
+   "role": "storekeeper",
+   "problem": "D2",
+   "part": "store",
+   "stories": [
+    "S2"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "save_cart",
+      "kind": "function",
+      "line": 9,
+      "signature": "save_cart(user_id, cart)",
+      "note": "Writes the cart lines.",
+      "exported": true
+     },
+     {
+      "name": "load_cart",
+      "kind": "function",
+      "line": 32,
+      "signature": "load_cart(user_id)",
+      "note": "Reads the cart, empty if none.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "src/db/connection.py",
+     "names": [
+      "get_connection"
+     ]
+    }
+   ],
+   "libs": [
+    "json"
+   ],
+   "used_by": [
+    "src/core/cart.py"
+   ]
+  },
+  "src/db/orders.py": {
+   "lang": "python",
+   "lines": 92,
+   "purpose": "Saves and reads orders.",
+   "role": "storekeeper",
+   "problem": "D2",
+   "part": "store",
+   "stories": [
+    "S3"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "save_order",
+      "kind": "function",
+      "line": 10,
+      "signature": "save_order(user_id, lines, amount)",
+      "note": "Inserts an order and its lines together.",
+      "exported": true
+     },
+     {
+      "name": "fetch_orders",
+      "kind": "function",
+      "line": 44,
+      "signature": "fetch_orders(user_id)",
+      "note": "Orders for a user.",
+      "exported": true
+     },
+     {
+      "name": "fetch_order",
+      "kind": "function",
+      "line": 66,
+      "signature": "fetch_order(order_id)",
+      "note": "One order with lines.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "src/db/connection.py",
+     "names": [
+      "transaction",
+      "get_connection"
+     ]
+    }
+   ],
+   "libs": [],
+   "used_by": [
+    "src/core/checkout.py",
+    "src/core/orders.py"
+   ]
+  },
+  "src/db/migrations/0001_initial.sql": {
+   "lang": "sql",
+   "lines": 38,
+   "purpose": "Creates the first version of the tables.",
+   "role": "storekeeper",
+   "problem": "D1",
+   "part": "store",
+   "stories": [],
+   "imports": [],
+   "libs": [],
+   "used_by": []
+  },
+  "src/integrations/payments.py": {
+   "lang": "python",
+   "lines": 80,
+   "purpose": "Wrapper around the payment provider's HTTP API.",
+   "role": "courier",
+   "problem": "C4",
+   "part": "core",
+   "stories": [
+    "S3"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "PaymentGateway",
+      "kind": "class",
+      "line": 10,
+      "signature": "class PaymentGateway",
+      "note": "Talks to the payment provider.",
+      "exported": true,
+      "methods": [
+       {
+        "name": "charge",
+        "line": 20,
+        "signature": "charge(self, amount, token)",
+        "note": "Sends the charge and returns the receipt id."
+       },
+       {
+        "name": "refund",
+        "line": 44,
+        "signature": "refund(self, charge_id)",
+        "note": "Reverses a charge."
+       }
+      ]
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "src/core/errors.py",
+     "names": [
+      "PaymentDeclined"
+     ]
+    }
+   ],
+   "libs": [
+    "requests"
+   ],
+   "used_by": [
+    "src/core/checkout.py"
+   ]
+  },
+  "src/integrations/mailer.py": {
+   "lang": "python",
+   "lines": 42,
+   "purpose": "Sends mail through the SMTP server.",
+   "role": "courier",
+   "problem": "C4",
+   "part": "core",
+   "stories": [
+    "S3"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "send_mail",
+      "kind": "function",
+      "line": 8,
+      "signature": "send_mail(to, subject, body)",
+      "note": "Sends one email.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [],
+   "libs": [
+    "smtplib"
+   ],
+   "used_by": [
+    "src/core/notify.py"
+   ]
+  },
+  "web/src/main.tsx": {
+   "lang": "typescript",
+   "lines": 24,
+   "purpose": "Starts the React app and mounts it on the page.",
+   "role": "conductor",
+   "problem": "W1",
+   "part": "web",
+   "stories": [],
+   "imports": [
+    {
+     "file": "web/src/App.tsx",
+     "names": [
+      "App"
+     ]
+    }
+   ],
+   "libs": [
+    "react",
+    "react-dom"
+   ],
+   "used_by": []
+  },
+  "web/src/App.tsx": {
+   "lang": "typescript",
+   "lines": 70,
+   "purpose": "Top-level layout and page switching.",
+   "role": "face",
+   "problem": "W1",
+   "part": "web",
+   "stories": [],
+   "outline": {
+    "items": [
+     {
+      "name": "App",
+      "kind": "function",
+      "line": 12,
+      "signature": "App(): JSX.Element",
+      "note": "Chooses which page to show from the URL.",
+      "exported": true,
+      "calls": [
+       "Routes"
+      ]
+     },
+     {
+      "name": "Routes",
+      "kind": "table",
+      "line": 50,
+      "signature": "const Routes = {...}",
+      "note": "Map from path to page component.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "web/src/pages/ProductList.tsx",
+     "names": [
+      "ProductList"
+     ]
+    },
+    {
+     "file": "web/src/pages/CartPage.tsx",
+     "names": [
+      "CartPage"
+     ]
+    },
+    {
+     "file": "web/src/pages/CheckoutPage.tsx",
+     "names": [
+      "CheckoutPage"
+     ]
+    },
+    {
+     "file": "web/src/hooks/useCart.ts",
+     "names": [
+      "CartProvider"
+     ]
+    }
+   ],
+   "libs": [
+    "react"
+   ],
+   "used_by": [
+    "web/src/main.tsx"
+   ]
+  },
+  "web/src/api/client.ts": {
+   "lang": "typescript",
+   "lines": 66,
+   "purpose": "Typed wrapper around fetch for the shop API.",
+   "role": "courier",
+   "problem": "W2",
+   "part": "web",
+   "stories": [
+    "S3"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "request",
+      "kind": "function",
+      "line": 8,
+      "signature": "request<T>(path, init?)",
+      "note": "Calls the API and throws ApiError on non-2xx.",
+      "exported": false,
+      "calls": [
+       "ApiError"
+      ]
+     },
+     {
+      "name": "ApiError",
+      "kind": "class",
+      "line": 30,
+      "signature": "class ApiError extends Error",
+      "note": "Error with the HTTP status.",
+      "exported": true,
+      "methods": [
+       {
+        "name": "constructor",
+        "line": 31,
+        "signature": "constructor(status, message)",
+        "note": "Keeps the status code."
+       }
+      ]
+     },
+     {
+      "name": "getProducts",
+      "kind": "function",
+      "line": 42,
+      "signature": "getProducts(q?, page?)",
+      "note": "GET /products.",
+      "exported": true
+     },
+     {
+      "name": "addToCart",
+      "kind": "function",
+      "line": 50,
+      "signature": "addToCart(id, qty)",
+      "note": "POST /cart/items.",
+      "exported": true
+     },
+     {
+      "name": "placeOrder",
+      "kind": "function",
+      "line": 58,
+      "signature": "placeOrder(body)",
+      "note": "POST /orders.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "web/src/types.ts",
+     "names": [
+      "Product",
+      "Cart",
+      "Order"
+     ]
+    }
+   ],
+   "libs": [],
+   "used_by": [
+    "web/src/hooks/useCart.ts",
+    "web/src/pages/CheckoutPage.tsx",
+    "web/src/pages/ProductList.tsx"
+   ]
+  },
+  "web/src/types.ts": {
+   "lang": "typescript",
+   "lines": 40,
+   "purpose": "Types shared by the pages and the API client.",
+   "role": "rulebook",
+   "problem": "W2",
+   "part": "web",
+   "stories": [],
+   "outline": {
+    "items": [
+     {
+      "name": "Product",
+      "kind": "type",
+      "line": 3,
+      "signature": "interface Product",
+      "note": "One product as sent by the API.",
+      "exported": true
+     },
+     {
+      "name": "CartLine",
+      "kind": "type",
+      "line": 12,
+      "signature": "interface CartLine",
+      "note": "A product and quantity.",
+      "exported": true
+     },
+     {
+      "name": "Cart",
+      "kind": "type",
+      "line": 18,
+      "signature": "interface Cart",
+      "note": "Lines and totals.",
+      "exported": true
+     },
+     {
+      "name": "Order",
+      "kind": "type",
+      "line": 26,
+      "signature": "interface Order",
+      "note": "A placed order.",
+      "exported": true
+     },
+     {
+      "name": "Money",
+      "kind": "type",
+      "line": 36,
+      "signature": "type Money = number",
+      "note": "Amount in cents.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [],
+   "libs": [],
+   "used_by": [
+    "web/src/api/client.ts",
+    "web/src/hooks/useCart.ts"
+   ]
+  },
+  "web/src/hooks/useCart.ts": {
+   "lang": "typescript",
+   "lines": 78,
+   "purpose": "Keeps the cart in one place so every page sees the same numbers.",
+   "role": "worker",
+   "problem": "W2",
+   "part": "web",
+   "stories": [],
+   "outline": {
+    "items": [
+     {
+      "name": "CartProvider",
+      "kind": "function",
+      "line": 10,
+      "signature": "CartProvider({children})",
+      "note": "Loads the cart and shares it with the tree.",
+      "exported": true,
+      "calls": [
+       "reducer"
+      ]
+     },
+     {
+      "name": "useCart",
+      "kind": "function",
+      "line": 44,
+      "signature": "useCart()",
+      "note": "Returns the cart and its add/remove functions.",
+      "exported": true
+     },
+     {
+      "name": "reducer",
+      "kind": "function",
+      "line": 58,
+      "signature": "reducer(state, action)",
+      "note": "Applies one cart action to the state.",
+      "exported": false
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "web/src/api/client.ts",
+     "names": [
+      "addToCart",
+      "getProducts"
+     ]
+    },
+    {
+     "file": "web/src/types.ts",
+     "names": [
+      "Cart"
+     ]
+    }
+   ],
+   "libs": [
+    "react"
+   ],
+   "used_by": [
+    "web/src/App.tsx",
+    "web/src/hooks/useCart.test.ts",
+    "web/src/pages/CartPage.tsx",
+    "web/src/pages/CheckoutPage.tsx",
+    "web/src/pages/ProductList.tsx"
+   ]
+  },
+  "web/src/pages/ProductList.tsx": {
+   "lang": "typescript",
+   "lines": 92,
+   "purpose": "Product grid with a search box.",
+   "role": "face",
+   "problem": "W3",
+   "part": "web",
+   "stories": [],
+   "outline": {
+    "items": [
+     {
+      "name": "ProductList",
+      "kind": "function",
+      "line": 10,
+      "signature": "ProductList()",
+      "note": "Fetches and shows products for the search text.",
+      "exported": true
+     },
+     {
+      "name": "ProductCard",
+      "kind": "function",
+      "line": 60,
+      "signature": "ProductCard({product})",
+      "note": "One tile with an add-to-cart button.",
+      "exported": false
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "web/src/api/client.ts",
+     "names": [
+      "getProducts"
+     ]
+    },
+    {
+     "file": "web/src/hooks/useCart.ts",
+     "names": [
+      "useCart"
+     ]
+    },
+    {
+     "file": "web/src/components/Money.tsx",
+     "names": [
+      "Money"
+     ]
+    }
+   ],
+   "libs": [
+    "react"
+   ],
+   "used_by": [
+    "web/src/App.tsx"
+   ]
+  },
+  "web/src/pages/CartPage.tsx": {
+   "lang": "typescript",
+   "lines": 64,
+   "purpose": "Shows cart lines and totals.",
+   "role": "face",
+   "problem": "W3",
+   "part": "web",
+   "stories": [],
+   "outline": {
+    "items": [
+     {
+      "name": "CartPage",
+      "kind": "function",
+      "line": 8,
+      "signature": "CartPage()",
+      "note": "Lists lines with quantity controls.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "web/src/hooks/useCart.ts",
+     "names": [
+      "useCart"
+     ]
+    },
+    {
+     "file": "web/src/components/Money.tsx",
+     "names": [
+      "Money"
+     ]
+    }
+   ],
+   "libs": [
+    "react"
+   ],
+   "used_by": [
+    "web/src/App.tsx"
+   ]
+  },
+  "web/src/pages/CheckoutPage.tsx": {
+   "lang": "typescript",
+   "lines": 110,
+   "purpose": "Address and card form that places the order.",
+   "role": "face",
+   "problem": "W3",
+   "part": "web",
+   "stories": [
+    "S3"
+   ],
+   "outline": {
+    "items": [
+     {
+      "name": "CheckoutPage",
+      "kind": "function",
+      "line": 12,
+      "signature": "CheckoutPage()",
+      "note": "Collects details and submits the order.",
+      "exported": true,
+      "calls": [
+       "validateAddress"
+      ]
+     },
+     {
+      "name": "validateAddress",
+      "kind": "function",
+      "line": 70,
+      "signature": "validateAddress(form)",
+      "note": "Returns a message per missing or bad field.",
+      "exported": false
+     }
+    ],
+    "consts": []
+   },
+   "imports": [
+    {
+     "file": "web/src/api/client.ts",
+     "names": [
+      "placeOrder",
+      "ApiError"
+     ]
+    },
+    {
+     "file": "web/src/hooks/useCart.ts",
+     "names": [
+      "useCart"
+     ]
+    }
+   ],
+   "libs": [
+    "react"
+   ],
+   "used_by": [
+    "web/src/App.tsx"
+   ]
+  },
+  "web/src/components/Money.tsx": {
+   "lang": "typescript",
+   "lines": 22,
+   "purpose": "Formats an amount in cents as currency.",
+   "role": "face",
+   "problem": "W3",
+   "part": "web",
+   "stories": [],
+   "outline": {
+    "items": [
+     {
+      "name": "Money",
+      "kind": "function",
+      "line": 5,
+      "signature": "Money({cents})",
+      "note": "Renders 1999 as $19.99.",
+      "exported": true
+     }
+    ],
+    "consts": []
+   },
+   "imports": [],
+   "libs": [
+    "react"
+   ],
+   "used_by": [
+    "web/src/pages/CartPage.tsx",
+    "web/src/pages/ProductList.tsx"
+   ]
+  },
+  "web/vite.config.ts": {
+   "lang": "typescript",
+   "lines": 18,
+   "purpose": "Build settings for the web app.",
+   "role": "config",
+   "problem": "W1",
+   "part": "web",
+   "stories": [],
+   "imports": [],
+   "libs": [
+    "vite"
+   ],
+   "used_by": []
+  },
+  "tests/test_cart.py": {
+   "lang": "python",
+   "lines": 90,
+   "purpose": "Checks the cart rules: merging lines, stock limits, removal.",
+   "role": "test",
+   "problem": "C3",
+   "part": "core",
+   "stories": [],
+   "imports": [
+    {
+     "file": "src/core/cart.py",
+     "names": [
+      "Cart",
+      "apply_change"
+     ]
+    }
+   ],
+   "libs": [
+    "pytest"
+   ],
+   "used_by": []
+  },
+  "tests/test_pricing.py": {
+   "lang": "python",
+   "lines": 110,
+   "purpose": "Checks tax, promo codes and shipping thresholds.",
+   "role": "test",
+   "problem": "C3",
+   "part": "core",
+   "stories": [],
+   "imports": [
+    {
+     "file": "src/core/pricing.py",
+     "names": [
+      "price_cart"
+     ]
+    }
+   ],
+   "libs": [
+    "pytest"
+   ],
+   "used_by": []
+  },
+  "tests/test_checkout.py": {
+   "lang": "python",
+   "lines": 140,
+   "purpose": "Checks checkout end to end with a fake payment gateway.",
+   "role": "test",
+   "problem": "C4",
+   "part": "core",
+   "stories": [],
+   "imports": [
+    {
+     "file": "src/core/checkout.py",
+     "names": [
+      "checkout"
+     ]
+    },
+    {
+     "file": "src/core/errors.py",
+     "names": [
+      "PaymentDeclined"
+     ]
+    }
+   ],
+   "libs": [
+    "pytest"
+   ],
+   "used_by": []
+  },
+  "tests/api/test_products.py": {
+   "lang": "python",
+   "lines": 64,
+   "purpose": "Checks product list and detail endpoints.",
+   "role": "test",
+   "problem": "A1",
+   "part": "api",
+   "stories": [],
+   "imports": [
+    {
+     "file": "src/api/app.py",
+     "names": [
+      "create_app"
+     ]
+    }
+   ],
+   "libs": [
+    "pytest"
+   ],
+   "used_by": []
+  },
+  "web/src/hooks/useCart.test.ts": {
+   "lang": "typescript",
+   "lines": 52,
+   "purpose": "Checks the cart reducer.",
+   "role": "test",
+   "problem": "W2",
+   "part": "web",
+   "stories": [],
+   "imports": [
+    {
+     "file": "web/src/hooks/useCart.ts",
+     "names": [
+      "useCart"
+     ]
+    }
+   ],
+   "libs": [
+    "vitest"
+   ],
+   "used_by": []
+  }
+ },
+ "warnings": [
+  "src/api/pagination.py: missing note for item 'MAX_PAGE_SIZE'",
+  "notes.yaml: note for 'Cart.discount' in src/core/cart.py, which no longer exists",
+  "Pattern 'src/api/routes/legacy_*.py' in problem A2 matches nothing"
+ ]
+}

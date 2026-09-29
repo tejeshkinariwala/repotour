@@ -1,0 +1,2 @@
+role_rules:
+  - {role: wizard, match: ['*.py']}

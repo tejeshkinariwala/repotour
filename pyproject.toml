@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "repotour"
+version = "0.1.0"
+description = "Turn a code repo into a readable single-file HTML tour."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Tejesh Kinariwala" }]
+requires-python = ">=3.10"
+dependencies = ["PyYAML>=6"]
+keywords = ["documentation", "codebase", "onboarding", "code-tour", "claude-code"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Documentation",
+]
+
+[project.urls]
+Homepage = "https://github.com/tejeshkinariwala/repotour"
+Issues = "https://github.com/tejeshkinariwala/repotour/issues"
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff>=0.16,<0.17"]
+
+[project.scripts]
+repotour = "repotour.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/repotour"]
+include = ["src/repotour/templates/*.html", "src/repotour/skill/**", "src/repotour/**/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/repotour", "tests", "LICENSE", "README.md", "CHANGELOG.md"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+extend-exclude = ["tests/fixtures"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+norecursedirs = ["tests/fixtures", ".venv"]

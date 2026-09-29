@@ -1,0 +1,340 @@
+src/requests/__init__.py:
+  _file: Checks dependency versions on import, then re-exports the public API (get, Session, Response, codes and the main exceptions).
+  check_compatibility: Asserts that urllib3 and chardet or charset_normalizer are in the supported version ranges, and warns if neither detector is installed.
+  _check_cryptography: Warns with RequestsDependencyWarning if the installed cryptography version is older than 1.3.4.
+src/requests/__version__.py:
+  _file: Defines the package name, version, author, license and URL strings that setuptools and utils.default_user_agent read.
+src/requests/_internal_utils.py:
+  to_native_string: Returns the str form of a str or bytes value, decoding bytes with the given encoding (ASCII by default).
+  unicode_is_ascii: Returns True if the string can be encoded as ASCII.
+src/requests/_types.py:
+  SupportsRead: Protocol for objects with a read method.
+  SupportsRead.read: Declares a read method that returns str or bytes.
+  has_read: Returns True if the object is a SupportsRead or has a read attribute.
+  SupportsItems: Protocol for objects with an items method, such as dicts.
+  SupportsItems.items: Declares an items method that returns key-value pairs.
+  is_prepared: Returns True at run time and only narrows the type for type checkers, which check that url and method are set.
+  _ValidatedRequest: Subtype of PreparedRequest that declares url and method as str, so type checkers accept a request that has been fully prepared; it adds no run-time behaviour.
+  BaseRequestKwargs: "TypedDict of the keyword arguments every request function accepts: headers, cookies, files, auth, timeout, allow_redirects, proxies, hooks, stream, verify and cert."
+  RequestKwargs: "TypedDict for request(), options(), head() and delete(): the base keyword arguments plus params, data and json."
+  GetKwargs: "TypedDict for get(): the base keyword arguments plus data and json (get() takes params as its own argument)."
+  PostKwargs: "TypedDict for post(): the base keyword arguments plus params (post() takes data and json as its own arguments)."
+  DataKwargs: "TypedDict for put() and patch(): the base keyword arguments plus params and json (both take data as their own argument)."
+src/requests/adapters.py:
+  BaseAdapter: Interface that custom transport adapters subclass.
+  BaseAdapter.__init__: Calls the parent constructor and sets nothing else.
+  BaseAdapter.send: Raises NotImplementedError; subclasses send the request and return a Response.
+  BaseAdapter.close: Raises NotImplementedError; subclasses release their resources here.
+  HTTPAdapter: Sends requests over HTTP and HTTPS with urllib3 pools; Session mounts one for each scheme by default.
+  HTTPAdapter.__init__: Sets the retry policy (no retries by default) and creates the urllib3 pool manager.
+  HTTPAdapter.__getstate__: Returns the attributes listed in __attrs__ so an adapter can be pickled.
+  HTTPAdapter.__setstate__: Restores the pickled attributes and creates a new pool manager.
+  HTTPAdapter.init_poolmanager: Creates the urllib3 PoolManager with the given pool count, size and blocking mode.
+  HTTPAdapter.proxy_manager_for: Returns the cached urllib3 proxy manager for a proxy URL, creating a SOCKS or HTTP proxy manager on first use.
+  SOCKSProxyManager: The urllib3 SOCKS proxy manager if urllib3.contrib.socks imports; otherwise a stand-in function that raises InvalidSchema saying SOCKS dependencies are missing.
+  HTTPAdapter.cert_verify: Sets certificate requirements and the CA bundle and client cert on the connection, and raises OSError if a file path does not exist.
+  HTTPAdapter.build_response: Copies status, headers, encoding, reason, URL and cookies from the urllib3 response into a new Response.
+  HTTPAdapter.build_connection_pool_key_attributes: Returns the host parameters and the TLS keyword arguments that select a connection from the pool.
+  HTTPAdapter.get_connection_with_tls_context: Returns a connection pool for the request, going through a proxy when one matches, and raises InvalidProxyURL for a proxy without a host.
+  HTTPAdapter.get_connection: Deprecated version of get_connection_with_tls_context that warns and returns a connection pool for a URL.
+  HTTPAdapter.close: Clears the pool manager and every proxy manager, which closes pooled connections.
+  HTTPAdapter.request_url: Returns the full URL for an HTTP request through a non-SOCKS proxy, and the path with its query otherwise.
+  HTTPAdapter.add_headers: Does nothing; subclasses override it to add headers to each request.
+  HTTPAdapter.proxy_headers: Returns a Proxy-Authorization header built from the credentials in the proxy URL, if any.
+  HTTPAdapter.send: Gets a connection, sends the request with urllib3, maps urllib3 errors to requests exceptions and returns the Response.
+  _urllib3_request_context: Returns the host parameters and TLS pool arguments (verify mode, CA path, client cert) for a request.
+src/requests/api.py:
+  request: Sends a request with the given method and URL through a new Session that is closed afterwards, and returns the Response.
+  get: Sends a GET request.
+  options: Sends an OPTIONS request.
+  head: Sends a HEAD request, with allow_redirects set to False unless the caller passes it.
+  post: Sends a POST request with optional form data or JSON.
+  put: Sends a PUT request.
+  patch: Sends a PATCH request.
+  delete: Sends a DELETE request.
+src/requests/auth.py:
+  _basic_auth_str: Returns the Basic Authorization header value for a username and password, encoded as latin1 and base64.
+  AuthBase: Base class that authentication handlers subclass.
+  AuthBase.__call__: Raises NotImplementedError; subclasses modify the request and return it.
+  HTTPBasicAuth: Holds a username and password and adds an Authorization header.
+  HTTPBasicAuth.__init__: Stores the username and password.
+  HTTPBasicAuth.__eq__: Returns True if the other object has the same username and password.
+  HTTPBasicAuth.__ne__: Returns the opposite of __eq__.
+  HTTPBasicAuth.__call__: Sets the Authorization header on the request and returns it.
+  HTTPProxyAuth: Basic authentication for a proxy.
+  HTTPProxyAuth.__call__: Sets the Proxy-Authorization header on the request and returns it.
+  HTTPDigestAuth: Answers a Digest authentication challenge from the server.
+  HTTPDigestAuth.__init__: Stores the username and password and creates thread-local state.
+  HTTPDigestAuth.init_per_thread_state: Sets the nonce, counter and challenge fields for the current thread on first use.
+  HTTPDigestAuth.build_digest_header: Returns the Digest Authorization value for a method and URL from the stored challenge, or None if the algorithm or qop is not supported.
+  HTTPDigestAuth.handle_redirect: Resets the 401 attempt counter to 1 when the response is a redirect.
+  HTTPDigestAuth.handle_401: On a 4xx response that asks for digest auth, parses the challenge and sends the request again with a Digest header, at most once.
+  HTTPDigestAuth.__call__: Adds a Digest header if a nonce is already known, records the body position and registers handle_401 and handle_redirect as response hooks.
+  HTTPDigestAuth.__eq__: Returns True if the other object has the same username and password.
+  HTTPDigestAuth.__ne__: Returns the opposite of __eq__.
+src/requests/certs.py:
+src/requests/compat.py:
+  _resolve_char_detection: Returns the first importable module of chardet and charset_normalizer, or None.
+src/requests/cookies.py:
+  MockRequest: Wraps a PreparedRequest so http.cookiejar sees the interface of a urllib2 request.
+  MockRequest.__init__: Stores the request, starts an empty dict of new headers and reads the URL scheme.
+  MockRequest.get_type: Returns the URL scheme.
+  MockRequest.get_host: Returns the host and port of the URL.
+  MockRequest.get_origin_req_host: Returns the same value as get_host.
+  MockRequest.get_full_url: Returns the request URL, using the Host header as the host if one is set.
+  MockRequest.is_unverifiable: Returns True.
+  MockRequest.has_header: Returns True if the name is in the request headers or in the headers added by the cookie jar.
+  MockRequest.get_header: Returns a header from the request or the added headers, or the default.
+  MockRequest.add_header: Raises NotImplementedError; cookie headers go through add_unredirected_header.
+  MockRequest.add_unredirected_header: Records a header that the cookie jar wants to add.
+  MockRequest.get_new_headers: Returns the headers the cookie jar added.
+  MockRequest.unverifiable: Property that returns is_unverifiable().
+  MockRequest.origin_req_host: Property that returns get_origin_req_host().
+  MockRequest.host: Property that returns get_host().
+  MockResponse: Wraps response headers so http.cookiejar can read them like a urllib response.
+  MockResponse.__init__: Stores the headers object.
+  MockResponse.info: Returns the stored headers.
+  MockResponse.getheaders: Calls getheaders(name) on the stored headers but does not return the result.
+  extract_cookies_to_jar: Reads Set-Cookie headers from a urllib3 response into a jar; does nothing if the response has no original http.client response.
+  get_cookie_header: Returns the Cookie header value the jar would send with the request, or None.
+  remove_cookie_by_name: Deletes every cookie with that name, optionally only for one domain and path.
+  CookieConflictError: Error raised when a lookup by name matches more than one cookie.
+  RequestsCookieJar: Cookie jar that also works like a dict of names to values and can be pickled.
+  RequestsCookieJar.get: Returns the value of the named cookie, optionally for one domain and path, or the default if there is none.
+  RequestsCookieJar.set: Adds or replaces a cookie from a name and value or a Morsel; a value of None removes the cookie.
+  RequestsCookieJar.iterkeys: Yields the name of each cookie.
+  RequestsCookieJar.keys: Returns the list of cookie names.
+  RequestsCookieJar.itervalues: Yields the value of each cookie.
+  RequestsCookieJar.values: Returns the list of cookie values.
+  RequestsCookieJar.iteritems: Yields a (name, value) pair for each cookie.
+  RequestsCookieJar.items: Returns the list of (name, value) pairs.
+  RequestsCookieJar.list_domains: Returns the domains of the cookies in the jar without repeats.
+  RequestsCookieJar.list_paths: Returns the paths of the cookies in the jar without repeats.
+  RequestsCookieJar.multiple_domains: Returns True if the jar has cookies for more than one domain.
+  RequestsCookieJar.get_dict: Returns a plain dict of cookie names to values, optionally for one domain and path.
+  RequestsCookieJar.__iter__: Iterates over Cookie objects, as CookieJar does.
+  RequestsCookieJar.__contains__: Returns True if a cookie with that name exists, including when several match.
+  RequestsCookieJar.__getitem__: Returns the value of the named cookie and raises CookieConflictError if several match.
+  RequestsCookieJar.__setitem__: Sets a cookie by name, using set.
+  RequestsCookieJar.__delitem__: Removes every cookie with that name.
+  RequestsCookieJar.set_cookie: Removes escaped quotes from a quoted cookie value, then adds the cookie.
+  RequestsCookieJar.update: Copies the cookies of another jar into this one, or updates from a dict.
+  RequestsCookieJar._find: Returns the value of the first cookie that matches name, domain and path, or raises KeyError.
+  RequestsCookieJar._find_no_duplicates: Returns the value of the one matching cookie; raises KeyError if none match and CookieConflictError if several do.
+  RequestsCookieJar.__getstate__: Returns the jar's state without its lock so the jar can be pickled.
+  RequestsCookieJar.__setstate__: Restores the state and creates a new lock if it is missing.
+  RequestsCookieJar.copy: Returns a new RequestsCookieJar with the same policy and cookies.
+  RequestsCookieJar.get_policy: Returns the cookie policy of the jar.
+  _copy_cookie_jar: Returns a copy of a jar, using its copy method if it has one, or None if the jar is None.
+  create_cookie: Returns a Cookie for a name and value, with defaults for domain, path and expiry, and raises TypeError for unknown keyword arguments.
+  morsel_to_cookie: Converts a Morsel to a Cookie, computing the expiry from max-age or expires.
+  cookiejar_from_dict: Returns a jar with one cookie per dict entry, optionally without replacing names already in the jar.
+  merge_cookies: Adds cookies from a dict or another jar into a jar and returns the jar, raising ValueError if the target is not a CookieJar.
+src/requests/exceptions.py:
+  RequestException: Base class of all requests errors; it keeps the request and response that caused the error.
+  RequestException.__init__: Takes optional request and response keyword arguments and uses the response's request if none is given.
+  InvalidJSONError: Error raised when JSON cannot be encoded or decoded.
+  JSONDecodeError: Error raised by Response.json when the body is not valid JSON.
+  JSONDecodeError.__init__: Builds the JSON error first, then the RequestException part from its arguments so the JSON message is kept.
+  JSONDecodeError.__reduce__: Returns the arguments needed to rebuild the error when it is pickled.
+  HTTPError: Error raised by raise_for_status for a 4xx or 5xx response.
+  ConnectionError: Error raised when a connection cannot be made or is dropped.
+  ProxyError: Error raised when the connection to a proxy fails.
+  SSLError: Error raised when TLS verification or the handshake fails.
+  Timeout: Error raised when a request times out.
+  ConnectTimeout: Error raised when connecting to the server times out; it is also a ConnectionError.
+  ReadTimeout: Error raised when the server does not send data in time.
+  URLRequired: Error raised when a URL is needed and none was given.
+  TooManyRedirects: Error raised when a request follows more redirects than max_redirects.
+  MissingSchema: Error raised when a URL has no scheme such as http.
+  InvalidSchema: Error raised when a URL has a scheme that no adapter handles.
+  InvalidURL: Error raised when a URL cannot be parsed or has no host.
+  InvalidHeader: Error raised when a header name or value contains characters that are not allowed.
+  InvalidProxyURL: Error raised when a proxy URL is malformed.
+  ChunkedEncodingError: Error raised when the server sends a broken chunked response.
+  ContentDecodingError: Error raised when the response body cannot be decoded, for example with a bad gzip stream.
+  StreamConsumedError: Error raised when a streamed response body is read a second time.
+  RetryError: Error raised when the urllib3 retry policy gives up.
+  UnrewindableBodyError: Error raised when a request body cannot be moved back to its start for a redirect.
+  RequestsWarning: Base class of the warnings this library emits.
+  FileModeWarning: Warning emitted when a file opened in text mode is used as a body, because its length is measured in bytes.
+  RequestsDependencyWarning: Warning emitted when a dependency version is outside the supported range.
+src/requests/help.py:
+  info: Returns a dictionary with platform, Python implementation, OpenSSL, urllib3, chardet, charset_normalizer, pyOpenSSL, cryptography, idna and requests versions.
+  _implementation: Returns the name and version of the running Python implementation.
+  main: Prints the result of info as indented JSON.
+src/requests/hooks.py:
+  default_hooks: Returns a dict with an empty list for each supported event.
+  dispatch_hook: Calls each hook registered for the event with the response and replaces the response with any non-None return value.
+src/requests/models.py:
+  RequestEncodingMixin: Methods that turn a URL, parameters and files into path and body values.
+  RequestEncodingMixin.path_url: Returns the path and query string of the URL, or / if the path is empty.
+  RequestEncodingMixin._encode_params: Returns strings, bytes and file objects unchanged, and URL-encodes a dict or list of pairs.
+  RequestEncodingMixin._encode_files: Returns the multipart/form-data body and content type for files and form fields, raising ValueError if files are missing or data is a string.
+  RequestHooksMixin: Methods that add and remove hooks.
+  RequestHooksMixin.register_hook: Adds a hook function or a list of hook functions for an event and raises ValueError for an unknown event.
+  RequestHooksMixin.deregister_hook: Removes a hook and returns True if it was registered, False otherwise.
+  Request: The request as the user wrote it, before any encoding.
+  Request.__init__: Stores the method, URL, headers, files, data, json, params, auth, cookies and hooks, using empty defaults for missing values.
+  Request.__repr__: Returns a short description with the method.
+  Request.prepare: Returns a PreparedRequest built from this request.
+  PreparedRequest: The request in final form, with the exact URL, headers and body to send.
+  PreparedRequest.__init__: Sets every field to an empty value.
+  PreparedRequest.prepare: Runs prepare_method, prepare_url, prepare_headers, prepare_cookies, prepare_body, prepare_auth and prepare_hooks in that order.
+  PreparedRequest.__repr__: Returns a short description with the method.
+  PreparedRequest.copy: Returns a new PreparedRequest with the same values and a copy of the headers and cookie jar.
+  PreparedRequest.prepare_method: Uppercases the method.
+  PreparedRequest._get_idna_encoded_host: Returns the host encoded with IDNA, and raises UnicodeError if it cannot be encoded.
+  PreparedRequest.prepare_url: Checks scheme and host, encodes a non-ASCII host, appends the encoded params to the query and re-quotes the URL.
+  PreparedRequest.prepare_headers: Stores the headers in a CaseInsensitiveDict after checking each one for illegal characters.
+  PreparedRequest.prepare_body: Builds the body from JSON, a stream, files or form data and sets Content-Type and Content-Length or Transfer-Encoding.
+  PreparedRequest.prepare_content_length: Sets Content-Length from the body size, or to 0 for methods other than GET and HEAD that have no body.
+  PreparedRequest.prepare_auth: Takes credentials from the URL if none are given, wraps a (user, password) tuple in HTTPBasicAuth and applies the auth handler to the request.
+  PreparedRequest.prepare_cookies: Stores the cookie jar and sets the Cookie header from it if none is set yet.
+  PreparedRequest.prepare_hooks: Registers each hook passed for its event.
+  Response: The server's answer, with status, headers, body, cookies, redirect history and the request that produced it.
+  Response.__init__: Sets every field to its empty value; the adapter fills them in.
+  Response.__enter__: Returns the response so it can be used in a with block.
+  Response.__exit__: Closes the response.
+  Response.__getstate__: Reads the body if it has not been read, then returns the fields listed in __attrs__ for pickling.
+  Response.__setstate__: Restores the fields and marks the content as consumed.
+  Response.__repr__: Returns a short description with the status code.
+  Response.__bool__: Returns True if the status code is below 400.
+  Response.__nonzero__: Returns True if the status code is below 400 (Python 2 name).
+  Response.__iter__: Iterates over the body in chunks of 128 bytes.
+  Response.ok: Returns True if raise_for_status does not raise.
+  Response.is_redirect: Returns True if the response has a Location header and a redirect status code.
+  Response.is_permanent_redirect: Returns True if the response has a Location header and status 301 or 308.
+  Response.next: Returns the PreparedRequest for the next redirect hop when redirects were not followed, or None.
+  Response.apparent_encoding: Returns the encoding guessed from the body by chardet or charset_normalizer, or utf-8 if none is installed.
+  Response.iter_content: Yields the body in chunks of the given size, raising StreamConsumedError if the stream was already read.
+  Response.iter_lines: Yields the body one line at a time, using iter_content.
+  Response.content: Returns the whole body as bytes, reading it on first access.
+  Response.text: Returns the body decoded with the response encoding or the guessed encoding, replacing bytes that cannot be decoded.
+  Response.json: Returns the body parsed as JSON, guessing the UTF encoding if none is set, and raises JSONDecodeError if it is invalid.
+  Response.links: Returns the Link header parsed into a dict keyed by rel or url.
+  Response.raise_for_status: Raises HTTPError for a 4xx or 5xx status and returns None otherwise.
+  Response.close: Closes the raw connection if the body was not read and releases the connection to the pool.
+src/requests/packages.py:
+  _file: Registers urllib3, idna and the character-detection library in sys.modules under requests.packages names for old import paths.
+src/requests/sessions.py:
+  merge_setting: Returns the request value if the session has none, the session value if the request has none, and a merged dict for two dicts with None values removed.
+  merge_hooks: Merges request and session hooks, skipping a side whose response list is empty.
+  SessionRedirectMixin: Methods that follow redirects and rebuild the request for each hop.
+  SessionRedirectMixin.send: Declares the send method that Session provides.
+  SessionRedirectMixin.get_redirect_target: Returns the Location header decoded as UTF-8 if the response is a redirect, otherwise None.
+  SessionRedirectMixin.should_strip_auth: Returns True if the new URL has a different host, or a different scheme or port other than an http to https upgrade on default ports.
+  SessionRedirectMixin.resolve_redirects: Yields each redirect response, or each prepared request when yield_requests is set, and raises TooManyRedirects after max_redirects.
+  SessionRedirectMixin.rebuild_auth: Removes the Authorization header if should_strip_auth is True, then applies netrc credentials for the new URL when trust_env is set.
+  SessionRedirectMixin.rebuild_proxies: Recomputes proxies for the new URL and replaces the Proxy-Authorization header.
+  SessionRedirectMixin.rebuild_method: Changes the method to GET for 303, for 302 unless HEAD, and for POST after 301.
+  Session: Holds default headers, auth, proxies, hooks, cookies and adapters shared by the requests it sends.
+  Session.__init__: Sets default values for every setting and mounts an HTTPAdapter for https:// and http://.
+  Session.__enter__: Returns the session so it can be used in a with block.
+  Session.__exit__: Closes the session.
+  Session.prepare_request: Returns a PreparedRequest built from a Request, merging cookies, headers, params, auth and hooks with the session's values.
+  Session.request: Builds a Request, prepares it, merges environment settings and sends it.
+  Session.get: Sends a GET request.
+  Session.options: Sends an OPTIONS request.
+  Session.head: Sends a HEAD request.
+  Session.post: Sends a POST request.
+  Session.put: Sends a PUT request.
+  Session.patch: Sends a PATCH request.
+  Session.delete: Sends a DELETE request.
+  Session.send: Sends a PreparedRequest through its adapter, runs response hooks, saves cookies, follows redirects and reads the body unless stream is set.
+  Session.merge_environment_settings: Returns proxies, stream, verify and cert merged from the call, the session and, when trust_env is set, the environment.
+  Session.get_adapter: Returns the first adapter whose prefix matches the URL, or raises InvalidSchema.
+  Session.close: Closes every mounted adapter.
+  Session.mount: Registers an adapter for a URL prefix and keeps longer prefixes first.
+  Session.__getstate__: Returns the fields listed in __attrs__ for pickling.
+  Session.__setstate__: Restores the fields from a pickled state.
+  session: Deprecated function that returns a new Session.
+src/requests/status_codes.py:
+  _init: Adds each name, and its upper-case form, to codes as an attribute and appends the list of names to the module docstring.
+src/requests/structures.py:
+  CaseInsensitiveDict: Dict-like mapping whose keys are compared without regard to case and which keeps the last spelling used.
+  CaseInsensitiveDict.__init__: Creates the store and fills it from the data and keyword arguments.
+  CaseInsensitiveDict.__setitem__: Stores the value under the lower-case key together with the original key.
+  CaseInsensitiveDict.__getitem__: Returns the value for the key, ignoring case.
+  CaseInsensitiveDict.__delitem__: Deletes the entry for the key, ignoring case.
+  CaseInsensitiveDict.__iter__: Yields the keys in their original case.
+  CaseInsensitiveDict.__len__: Returns the number of entries.
+  CaseInsensitiveDict.lower_items: Yields (lower-case key, value) pairs.
+  CaseInsensitiveDict.__eq__: Compares with another mapping ignoring key case, and returns NotImplemented for other types.
+  CaseInsensitiveDict.copy: Returns a new CaseInsensitiveDict with the same entries.
+  CaseInsensitiveDict.__repr__: Returns the repr of a plain dict of the items.
+  LookupDict: Dict subclass whose values are read as attributes and return None when missing.
+  LookupDict.__init__: Stores a name for the repr.
+  LookupDict.__repr__: Returns the name in angle brackets.
+  LookupDict.__getattr__: Returns an attribute that was set, and raises AttributeError otherwise.
+  LookupDict.__getitem__: Returns the stored attribute for the key, or None if there is none.
+  LookupDict.get: Returns the stored attribute for the key, or the default.
+src/requests/utils.py:
+  dict_to_sequence: Returns the items of a dict-like object, or the object itself if it is already a sequence of pairs.
+  super_len: Returns how many bytes remain to be read from a string, bytes, file or stream, or 0 if unknown.
+  get_netrc_auth: Returns the (login, password) from the netrc file for the URL host, or None.
+  guess_filename: Returns the base name of an object's name attribute, unless it looks like <stdin>.
+  extract_zipped_paths: Extracts a file inside a zip archive to a temporary file and returns its path, or returns the path unchanged.
+  atomic_open: Context manager that writes to a temporary file and replaces the target file when the block ends without error.
+  from_key_val_list: Returns an OrderedDict from a mapping or list of pairs, and raises ValueError for a string, bytes or number.
+  to_key_val_list: Returns a list of (key, value) pairs from a mapping or list of pairs, and raises ValueError for a string, bytes or number.
+  parse_list_header: Splits a comma-separated header into a list and removes quotes from quoted items.
+  parse_dict_header: Parses a header of key=value items into a dict, with None for keys that have no value.
+  unquote_header_value: Removes surrounding quotes and backslash escapes from a header value.
+  dict_from_cookiejar: Returns a dict of cookie names to values.
+  add_dict_to_cookiejar: Adds the dict's entries to the jar as cookies and returns the jar.
+  get_encodings_from_content: Deprecated function that returns the charsets named in meta tags and the XML declaration of a page.
+  get_encoding_from_headers: Returns the charset from Content-Type, ISO-8859-1 for text types without one, utf-8 for JSON, or None.
+  _parse_content_type_header: Returns the media type and a dict of its parameters from a Content-Type value.
+  stream_decode_response_unicode: Yields decoded text for each chunk, or the raw chunks if the response has no encoding.
+  iter_slices: Yields slices of a string or bytes with the given length, or the whole value if the length is missing or not positive.
+  proxy_bypass_registry: "Windows only: reads ProxyEnable and ProxyOverride from the registry and returns True if the host matches an override entry; returns False if the registry cannot be read."
+  proxy_bypass: "Windows only: returns proxy_bypass_environment(host) if proxy environment variables are set, otherwise proxy_bypass_registry(host)."
+  get_unicode_from_response: Deprecated function that returns the body decoded with the header charset, or with utf-8 replacing bad bytes.
+  unquote_unreserved: Decodes percent escapes that stand for unreserved characters and leaves the others encoded, raising InvalidURL for a bad escape.
+  requote_uri: Returns the URI with unreserved escapes decoded and other unsafe characters quoted.
+  address_in_network: Returns True if an IPv4 address is inside a CIDR network such as 192.168.1.0/24.
+  dotted_netmask: Returns the dotted form of a prefix length, for example 255.255.255.0 for 24.
+  is_ipv4_address: Returns True if the string is an IPv4 address.
+  is_valid_cidr: Returns True if the string is an IPv4 address with a prefix length from 1 to 32.
+  set_environ: Context manager that sets an environment variable and restores the old value afterwards; it does nothing if the value is None.
+  should_bypass_proxies: Returns True if the URL host matches no_proxy (argument or environment) or the system proxy bypass rules.
+  get_environ_proxies: Returns the proxies from the environment, or an empty dict if the URL should bypass proxies.
+  select_proxy: Returns the proxy for a URL, trying scheme with host, scheme, all with host and all in that order.
+  resolve_proxies: Returns a proxies dict with the environment proxy for the URL scheme added when trust_env is set and no_proxy does not match.
+  default_user_agent: Returns the default User-Agent string, python-requests followed by the version.
+  default_headers: Returns a CaseInsensitiveDict with User-Agent, Accept-Encoding, Accept and Connection.
+  parse_header_links: Parses a Link header into a list of dicts with the url and its parameters.
+  guess_json_utf: Returns the UTF encoding of a JSON body from its byte order mark or its null bytes, or None.
+  prepend_scheme_if_needed: Adds the scheme to a URL that has none, and keeps an existing scheme.
+  get_auth_from_url: Returns the unquoted (username, password) from a URL, or empty strings if there are none.
+  check_header_validity: Raises InvalidHeader if the header name or value has leading whitespace or reserved characters.
+  _validate_header_part: Raises InvalidHeader if one part of a header is not str or bytes or fails the validation regex.
+  urldefragauth: Returns the URL without its fragment and its user and password.
+  rewind_body: Moves a request body back to its recorded start position, and raises UnrewindableBodyError if it cannot.
+docs/_themes/flask_theme_support.py:
+  FlaskyStyle: "Pygments Style subclass for the docs theme: sets a light grey background and maps token types to colours and bold or italic, based on the tango style."
+.github/FUNDING.yml:
+  _file: "Lists the Python Software Foundation sponsorship link that GitHub shows on the Sponsor button."
+.github/dependabot.yml:
+  _file: "Configures Dependabot to open weekly update pull requests for GitHub Actions and pre-commit hooks, skipping patch releases."
+.github/workflows/close-issues.yml:
+  _file: "Workflow that closes and locks issues that carry the autoclose labels, with a comment pointing question askers elsewhere."
+.github/workflows/lint.yml:
+  _file: "Workflow that runs pre-commit on every push and pull request."
+.github/workflows/lock-issues.yml:
+  _file: "Workflow that locks issues and pull requests after 90 days of inactivity, run daily."
+.github/workflows/publish.yml:
+  _file: "Workflow that builds the distributions and publishes them to PyPI when a version tag is pushed, or to Test PyPI on manual runs."
+.github/workflows/run-tests.yml:
+  _file: "Workflow that runs the test suite on several Python versions and operating systems."
+.github/workflows/typecheck.yml:
+  _file: "Workflow that runs the type checker on the oldest and newest supported Python versions."
+.pre-commit-config.yaml:
+  _file: "Pre-commit hooks: basic file checks plus ruff linting and formatting."
+pyproject.toml:
+  _file: "Project metadata, dependencies, setuptools build settings and ruff configuration."
+setup.py:
+  _file: "Stops with an error on Python older than 3.10, then calls setuptools setup(), which reads pyproject.toml."
+tox.ini:
+  _file: "tox environments that run pytest on each supported Python version, with and without chardet."

@@ -1,0 +1,353 @@
+project:
+  name: Zustand
+  tagline: A small state-management library for React, built on a framework-free store with optional middleware.
+  repo_url: https://github.com/pmndrs/zustand
+  branch: main
+  overview: |
+    Zustand keeps application state in a store object that lives outside React. A store holds one state value, lets you read it, replace or merge into it, and subscribe to changes. `src/vanilla.ts` implements that store and does not import React.
+
+    `src/react.ts` wraps a store in a hook built on `useSyncExternalStore`, so components re-render when the slice of state they select changes. Middleware in `src/middleware/` are functions that wrap the function you pass to `create`, to add persistence, Redux DevTools, Immer-style updates and similar features.
+
+    The repo also holds the Rollup build that publishes several entry points (`zustand`, `zustand/vanilla`, `zustand/middleware`, `zustand/shallow`, `zustand/traditional`, `zustand/middleware/immer`) and a Vitest suite in `tests/`. The `docs/` site and `examples/` apps are excluded from this tour.
+
+scan:
+  exclude:
+    - "examples/**"
+    - ".github/**"
+    - "FUNDING.json"
+
+parts:
+  - id: core
+    name: Store core
+    role: Holds the state, applies updates and notifies subscribers, without any React code.
+    folders: [src/vanilla.ts, src/index.ts]
+    summary: |
+      `createStore` in `src/vanilla.ts` builds a store with `setState`, `getState`, `getInitialState` and `subscribe`. The same file defines the shared TypeScript types, including the `StoreMutators` interface that middleware extend. `src/index.ts` is the package entry: it re-exports the core, the React hook and every middleware except Immer.
+    color: "#2563eb"
+
+  - id: react
+    name: React bindings
+    role: Connects a store to components and avoids re-renders when the selected value did not change.
+    folders: [src/react.ts, src/react, src/vanilla, src/shallow.ts, src/traditional.ts]
+    summary: |
+      `create` in `src/react.ts` builds a store and returns a hook that reads it through `React.useSyncExternalStore`. `src/traditional.ts` offers the same API on the `use-sync-external-store` shim, with an optional equality function. The shallow files compare selector results by their top-level entries.
+    color: "#16a34a"
+
+  - id: middleware
+    name: Middleware
+    role: Wraps a store initializer to add persistence, DevTools, Immer updates and other behaviour.
+    folders: [src/middleware, src/middleware.ts]
+    summary: |
+      Each middleware takes a state initializer (a function `(set, get, api) => state`) and returns another one. Most replace or wrap `api.setState` or `api.subscribe` before calling the inner initializer. Each file also adds an entry to `StoreMutators` in `src/vanilla.ts` through `declare module`, so TypeScript knows which methods the store gained. `src/middleware.ts` re-exports all middleware except `immer`, which is imported from `zustand/middleware/immer`.
+    color: "#d97706"
+
+  - id: build
+    name: Build and tooling
+    role: Compiles the source into the published package and configures tests, types and linting.
+    folders: [".", tests]
+    summary: |
+      `rollup.config.mjs` builds one CommonJS file and one ESM file per entry point, chosen by a `--config-<entry>` flag that the scripts in `package.json` pass. `vitest.config.mts` and `tsconfig.json` map `zustand` imports to `src/` so tests run against source. ESLint and TypeScript settings live in the other root config files.
+    color: "#7c3aed"
+
+problems:
+  - id: C1
+    part: core
+    title: State has to live outside React and still notify whoever depends on it
+    without: Each app would hand-write its own state holder, listener set and merge logic, and code outside React (timers, sockets, tests) could not read or change state.
+    fix: "`createStore` in `src/vanilla.ts` keeps `state` and a `Set` of listeners in a closure. `setState` computes the next state, skips the update when it is identical to the current one, merges or replaces it, then calls every listener with the new and previous state."
+    files:
+      - src/vanilla.ts
+    tests:
+      - tests/vanilla/basic.test.ts
+      - tests/vanilla/subscribe.test.tsx
+
+  - id: C2
+    part: core
+    title: Users need one import path for the store, the hook and the middleware
+    without: Users would import from several internal files and could not rely on the file layout staying the same.
+    fix: "`src/index.ts` re-exports `src/vanilla.ts` and `src/react.ts`, and re-exports `redux`, `devtools`, `subscribeWithSelector`, `combine`, `persist`, `createJSONStorage` and `ssrSafe` (as `unstable_ssrSafe`) from the middleware files. `immer` is not re-exported here."
+    files:
+      - src/index.ts
+    tests:
+      - tests/types.test.tsx
+
+  - id: R1
+    part: react
+    title: A component must read store state and re-render when its slice changes
+    without: Components would need their own subscription and force-update code, and could tear (show different state in one render) under concurrent rendering.
+    fix: "`useStore` in `src/react.ts` calls `React.useSyncExternalStore` with `api.subscribe` and a snapshot function that applies the selector. `create` calls `createStore` and returns a hook with the store methods copied onto it; called with no argument it returns the curried form `create<T>()(initializer)`. The server snapshot uses `api.getInitialState`."
+    files:
+      - src/react.ts
+    tests:
+      - tests/basic.test.tsx
+      - tests/ssr.test.tsx
+
+  - id: R2
+    part: react
+    title: A selector that returns a new object or array re-renders on every update
+    without: "A selector like `(s) => ({ a: s.a, b: s.b })` returns a new object each call, so `useSyncExternalStore` sees a change every time and the component re-renders on every store update."
+    fix: "`shallow` in `src/vanilla/shallow.ts` compares two values by their top-level entries. `useShallow` in `src/react/shallow.ts` wraps a selector and returns the previous result when `shallow` says the new one is equal. `src/shallow.ts` exports both from `zustand/shallow`."
+    files:
+      - src/vanilla/shallow.ts
+      - src/react/shallow.ts
+      - src/shallow.ts
+    tests:
+      - tests/shallow.test.tsx
+      - tests/vanilla/shallow.test.tsx
+
+  - id: R3
+    part: react
+    title: Some apps need a custom equality check, or a React version without useSyncExternalStore
+    without: Apps on the older API would not be able to pass an equality function to a hook, and could not use Zustand hooks that take one.
+    fix: "`src/traditional.ts` provides `createWithEqualityFn` and `useStoreWithEqualityFn`. They use `useSyncExternalStoreWithSelector` from the `use-sync-external-store` shim and accept an equality function per hook call or as a default for the store."
+    files:
+      - src/traditional.ts
+
+  - id: M1
+    part: middleware
+    title: State is lost on page reload
+    without: Every visit would start from the initial state, and each app would write its own load, save, version and migration code.
+    fix: "`persist` in `src/middleware/persist.ts` saves the state to a storage after every `set` and loads it when the store is created. `createJSONStorage` turns a string storage such as `localStorage` into a JSON storage. On load it checks the stored version, calls `migrate` when versions differ, and merges the stored state into the current one. It handles sync and async storages through `toThenable`. It also adds `api.persist` with `rehydrate`, `hasHydrated`, `onHydrate`, `onFinishHydration`, `setOptions`, `getOptions` and `clearStorage`."
+    files:
+      - src/middleware/persist.ts
+    tests:
+      - tests/persistSync.test.tsx
+      - tests/persistAsync.test.tsx
+
+  - id: M2
+    part: middleware
+    title: State changes are hard to inspect while debugging
+    without: Developers would have no action log, no time travel, and no way to set state from the browser while debugging.
+    fix: "`devtools` in `src/middleware/devtools.ts` connects to the Redux DevTools browser extension when it exists and `enabled` allows it. It replaces `api.setState` so each update sends an action and the new state to the extension, and it applies DevTools messages such as `JUMP_TO_STATE` back to the store. The `store` option lets several stores share one connection, and `api.devtools.cleanup` closes the subscription."
+    files:
+      - src/middleware/devtools.ts
+    tests:
+      - tests/devtools.test.tsx
+
+  - id: M3
+    part: middleware
+    title: Updating deeply nested state needs verbose spread code
+    without: Each nested update would need a hand-written chain of object spreads.
+    fix: "`immer` in `src/middleware/immer.ts` replaces `store.setState` so that when it is given a function, the function is wrapped with Immer's `produce` and can mutate a draft. Non-function values pass through unchanged."
+    files:
+      - src/middleware/immer.ts
+    tests:
+      - tests/immer.test.tsx
+
+  - id: M4
+    part: middleware
+    title: A listener should run only when one slice of state changes
+    without: Plain `subscribe` calls the listener on every state change, so each listener would have to compare old and new slices itself.
+    fix: "`subscribeWithSelector` in `src/middleware/subscribeWithSelector.ts` replaces `api.subscribe` with a version that accepts a selector, a listener and options (`equalityFn`, `fireImmediately`). The listener runs only when the selected slice differs."
+    files:
+      - src/middleware/subscribeWithSelector.ts
+    tests:
+      - tests/subscribe.test.tsx
+
+  - id: M5
+    part: middleware
+    title: There are other common ways to define store state
+    without: Users who prefer a Redux-style reducer, or want state and actions typed separately, would have to write that wiring themselves.
+    fix: "`redux` in `src/middleware/redux.ts` builds a store from a reducer and initial state and adds a `dispatch` function. `combine` in `src/middleware/combine.ts` merges an initial state object with the result of a creator function, which lets TypeScript infer the state type."
+    files:
+      - src/middleware/redux.ts
+      - src/middleware/combine.ts
+
+  - id: M6
+    part: middleware
+    title: A store shared between server and client can be updated during server rendering
+    without: State set during server rendering would be lost or leak between requests, and nothing would report the mistake.
+    fix: "`ssrSafe` in `src/middleware/ssrSafe.ts` checks `isSSR` (true when `window` is undefined). When true, it replaces `set` and `api.setState` with a function that throws. It is exported as `unstable_ssrSafe` and its source comments say it is experimental."
+    files:
+      - src/middleware/ssrSafe.ts
+
+  - id: M7
+    part: middleware
+    title: Users need one import path for the middleware, and their types must compose
+    without: Users would import from each middleware file, and nothing would check that stacked middleware keep their types.
+    fix: "`src/middleware.ts` re-exports the middleware files except `immer`. Type composition is checked by `tests/middlewareTypes.test.tsx`."
+    files:
+      - src/middleware.ts
+    tests:
+      - tests/middlewareTypes.test.tsx
+
+  - id: B1
+    part: build
+    title: One source tree must ship as CommonJS, ESM and type declarations for several entry points
+    without: Consumers on different module systems and bundlers could not import the package, and each entry point would need a hand-written build.
+    fix: "`rollup.config.mjs` returns a CommonJS config and an ESM config for the entry named by a `--config-<name>` flag, plus a declarations config for the main entry. `package.json` scripts run it once per entry, then patch type declarations and copy files into `dist`. The `exports` map in `package.json` exposes each entry."
+    files:
+      - package.json
+      - rollup.config.mjs
+      - pnpm-workspace.yaml
+
+  - id: B2
+    part: build
+    title: Source files need type checking, linting and shared type declarations
+    without: Type errors and style problems would reach the published package, and `import.meta.env` would not type check.
+    fix: "`tsconfig.json` sets compiler options and maps `zustand` imports to `src/`. `eslint.config.mjs` sets lint rules. `src/types.d.ts` declares `ImportMeta.env` with a `MODE` field, which `devtools.ts` reads."
+    files:
+      - tsconfig.json
+      - eslint.config.mjs
+      - src/types.d.ts
+
+  - id: B3
+    part: build
+    title: Tests must run against the source, not a built package
+    without: Tests would need a build first, and `import from 'zustand'` would resolve to an installed copy.
+    fix: "`vitest.config.mts` aliases `zustand` and `zustand/*` to files in `src/`, runs tests in jsdom and loads `tests/setup.ts`. `tests/test-utils.ts` holds JSON helpers for Map values and a `sleep` function used by the persist tests."
+    files:
+      - vitest.config.mts
+      - tests/setup.ts
+      - tests/test-utils.ts
+
+stories:
+  - id: S1
+    act: "Act 1: Use a store"
+    title: A component reads and updates a counter
+    command: "const useBear = create((set) => ({ bears: 0, add: () => set((s) => ({ bears: s.bears + 1 })) }))"
+    summary: "`create` builds a store and a hook. A component calls the hook with a selector, and calling `add` updates the store and re-renders subscribers whose selected value changed."
+    steps:
+      - text: "The user imports `create` from `zustand`. `src/index.ts` re-exports it from `src/react.ts`."
+        files: [src/index.ts, src/react.ts]
+      - text: "`create` calls `createImpl`, which calls `createStore(createState)`. `createStoreImpl` builds `setState`, `getState`, `getInitialState` and `subscribe`, then calls `createState(setState, getState, api)` and keeps the result as both the state and the initial state."
+        files: [src/react.ts, src/vanilla.ts]
+      - text: "`createImpl` defines `useBoundStore`, which calls `useStore(api, selector)`, and copies the store methods onto it with `Object.assign`. `create` returns it."
+        files: [src/react.ts]
+      - text: "A component calls `useBear((s) => s.bears)`. `useStore` calls `React.useSyncExternalStore(api.subscribe, () => selector(api.getState()), () => selector(api.getInitialState()))`."
+        files: [src/react.ts]
+      - text: "A click handler calls `add`, which calls `set`. `setState` calls the updater, returns early if the result is identical (`Object.is`) to the current state, otherwise merges it with `Object.assign({}, state, nextState)` and calls every listener with the new and previous state."
+        files: [src/vanilla.ts]
+      - text: "React calls the snapshot function again. If the selected value differs from the last one, the component re-renders."
+        files: [src/react.ts]
+
+  - id: S2
+    act: "Act 1: Use a store"
+    title: Code outside React uses a store
+    command: "import { createStore } from 'zustand/vanilla'"
+    summary: "`createStore` alone gives a working store with no React import. Callers read state, subscribe and update it directly."
+    steps:
+      - text: "`createStore(initializer)` returns the store `api`. Called with no argument it returns `createStoreImpl`, so the curried form `createStore<T>()(initializer)` works."
+        files: [src/vanilla.ts]
+      - text: "`api.subscribe(listener)` adds the listener to a `Set` and returns a function that deletes it."
+        files: [src/vanilla.ts]
+      - text: "`api.setState(partial, replace)` notifies listeners only when the next state is not identical to the current one. With `replace` true, or when the next state is not an object, the state is replaced rather than merged."
+        files: [src/vanilla.ts]
+      - text: "`api.getInitialState()` returns the value from when the store was created, and `api.getState()` returns the current one. The tests in `tests/vanilla/basic.test.ts` check these cases."
+        files: [src/vanilla.ts, tests/vanilla/basic.test.ts]
+
+  - id: S3
+    act: "Act 1: Use a store"
+    title: A selector returns a new object and the component re-renders too often
+    command: "const { a, b } = useStore(useShallow((s) => ({ a: s.a, b: s.b })))"
+    summary: "`useShallow` keeps the previous selector result when the new one has equal top-level entries."
+    steps:
+      - text: "`useShallow(selector)` returns a function that runs the selector and stores the last result in a `useRef`."
+        files: [src/react/shallow.ts]
+      - text: "It calls `shallow(prev.current, next)`. `shallow` returns true for identical values, and false for non-objects or objects with different prototypes."
+        files: [src/react/shallow.ts, src/vanilla/shallow.ts]
+      - text: "For iterables with `entries` (Map, Set, arrays) it compares entries, for other iterables it compares values in order, and for plain objects it compares `Object.entries`. Values are compared with `Object.is`."
+        files: [src/vanilla/shallow.ts]
+      - text: "When equal, `useShallow` returns the previous object, so `useSyncExternalStore` sees the same snapshot and skips the re-render."
+        files: [src/react/shallow.ts, src/react.ts]
+
+  - id: S4
+    act: "Act 2: Add behaviour with middleware"
+    title: State survives a page reload
+    command: "create(persist((set) => ({ count: 0 }), { name: 'counter' }))"
+    summary: "`persist` saves state after each update and restores it when the store is created."
+    steps:
+      - text: "`create` calls `persist(config, options)`, which returns an initializer. `persistImpl` builds `options`, using `createJSONStorage(() => window.localStorage)` as the default storage, an identity `partialize`, version 0 and a shallow `merge`."
+        files: [src/middleware/persist.ts]
+      - text: "If `createJSONStorage` could not get a storage (for example `localStorage` is not defined) the initializer returns `config(...)` with a `set` that logs a warning and still updates the state."
+        files: [src/middleware/persist.ts]
+      - text: "Otherwise `api.setState` and the `set` given to `config` are wrapped so each update also calls `setItem`, which writes `{ state: partialize(state), version }` under `options.name`."
+        files: [src/middleware/persist.ts]
+      - text: "Unless `skipHydration` is set, `hydrate` runs. It calls `getItem` through `toThenable`, so sync and async storages share one code path. If the stored version differs from `options.version`, it calls `migrate`, or logs an error when there is none."
+        files: [src/middleware/persist.ts]
+      - text: "The stored state is merged with the current state by `options.merge` and applied with `set(state, true)`. Hydration listeners and `onRehydrateStorage` callbacks run, and a counter (`hydrationVersion`) makes older in-flight hydrations stop when a newer one starts."
+        files: [src/middleware/persist.ts, src/vanilla.ts]
+      - text: "The initializer returns `stateFromStorage || configResult`, so with a sync storage the first state already holds the stored values."
+        files: [src/middleware/persist.ts]
+      - text: "`api.persist` is set before hydration starts. `rehydrate` runs `hydrate` again, `setOptions` merges new options (and switches storage if one is given), `clearStorage` removes the stored item and stops any in-flight hydration, and `onHydrate` and `onFinishHydration` register listeners and return a function that removes them."
+        files: [src/middleware/persist.ts]
+
+  - id: S5
+    act: "Act 2: Add behaviour with middleware"
+    title: A developer inspects a store in Redux DevTools
+    command: "create(devtools((set) => ({ count: 0 }), { name: 'counter' }))"
+    summary: "`devtools` sends each update to the browser extension and applies commands from it."
+    steps:
+      - text: "`devtoolsImpl` reads `enabled`, `anonymousActionType` and `store` from the options. It looks for `window.__REDUX_DEVTOOLS_EXTENSION__` when `enabled` is true or, if unset, `import.meta.env?.MODE` is not `production`. Without the extension it returns `fn(set, get, api)` unchanged."
+        files: [src/middleware/devtools.ts, src/types.d.ts]
+      - text: "`extractConnectionInformation` connects to the extension. With a `store` option, stores with the same `name` share one connection kept in `trackedConnections`."
+        files: [src/middleware/devtools.ts]
+      - text: "`api.setState` is replaced. It calls the original `set`, then sends `{ type }` and the state to the extension. The type is the action name or object passed as the third argument, else `anonymousActionType`, else a name from `findCallerName` (parsed from the stack), else `anonymous`."
+        files: [src/middleware/devtools.ts]
+      - text: "The inner initializer runs with the new `api.setState`, and the result is sent with `connection.init`."
+        files: [src/middleware/devtools.ts]
+      - text: "The extension messages are handled: `JUMP_TO_STATE`, `ROLLBACK` and `IMPORT_STATE` set state through `setStateFromDevtools`, which turns recording off during the update so the change is not sent back. `RESET`, `COMMIT` and `PAUSE_RECORDING` are handled in the same switch."
+        files: [src/middleware/devtools.ts]
+      - text: "For stores built with `redux`, an action sent from the DevTools calls `api.dispatch` (only when the store has `dispatchFromDevtools`)."
+        files: [src/middleware/devtools.ts, src/middleware/redux.ts]
+
+  - id: S6
+    act: "Act 2: Add behaviour with middleware"
+    title: A developer stacks middleware and adds a new one
+    command: "create<State>()(devtools(persist(immer((set) => ({ ... })), { name: 'x' })))"
+    summary: "A middleware is a function from initializer to initializer. Its type entry in `StoreMutators` tells TypeScript which methods the store gains."
+    steps:
+      - text: "`create<State>()` is called with no argument, which returns a function that takes the initializer. This form lets TypeScript take the state type from the caller."
+        files: [src/react.ts, src/vanilla.ts]
+      - text: "The outermost middleware runs first when the store is created. Each calls the next one with `(set, get, api)`, possibly after replacing `api.setState` or `api.subscribe`. `immer` replaces `store.setState` with a version that wraps function updaters in `produce`."
+        files: [src/middleware/immer.ts]
+      - text: "`subscribeWithSelector` is another example: it saves `api.subscribe`, replaces it with the selector-aware version, then calls the inner initializer."
+        files: [src/middleware/subscribeWithSelector.ts]
+      - text: "Each middleware file has a `declare module '../vanilla'` block that adds a key such as `'zustand/immer'` to `StoreMutators`. The `Mutate` type in `src/vanilla.ts` applies these entries in order, so the final store type has the added methods."
+        files: [src/vanilla.ts, src/middleware/immer.ts, src/middleware/persist.ts, src/middleware/devtools.ts]
+      - text: "To add a middleware: create a file in `src/middleware/`, add its `StoreMutators` entry, export it from `src/middleware.ts` (and from `src/index.ts` if it should be in the main entry), and add tests. `tests/middlewareTypes.test.tsx` checks type composition."
+        files: [src/middleware.ts, src/index.ts, tests/middlewareTypes.test.tsx]
+
+  - id: S7
+    act: "Act 3: Servers and releases"
+    title: A component renders on the server and hydrates on the client
+    summary: "The hook passes `getInitialState` as the server snapshot, and `ssrSafe` can block updates during server rendering."
+    steps:
+      - text: "During server rendering and hydration, `useSyncExternalStore` calls its third argument, so `useStore` returns `selector(api.getInitialState())`."
+        files: [src/react.ts]
+      - text: "The hydration render therefore matches the server HTML, and React then re-renders with the current state. `tests/ssr.test.tsx` checks two cases: a `Counter` that increases the store in an effect after hydration, and a `setState` call during hydration, with no console errors in the second case."
+        files: [src/react.ts, tests/ssr.test.tsx]
+      - text: "With `ssrSafe`, when `window` is undefined the initializer replaces `api.setState` and the `set` it passes down with a function that throws `Cannot set state of Zustand store in SSR`."
+        files: [src/middleware/ssrSafe.ts]
+
+  - id: S8
+    act: "Act 3: Servers and releases"
+    title: A maintainer builds the package
+    command: pnpm build
+    summary: "Rollup runs once per entry point, then scripts patch the output and copy files into `dist`."
+    steps:
+      - text: "`pnpm build` removes `dist`, runs every `build:*` script, then runs `postbuild`."
+        files: [package.json]
+      - text: "Each `build:*` script runs `rollup -c` with a flag such as `--config-middleware_immer`. The default function in `rollup.config.mjs` turns the flag into an entry path (`_` becomes `/`) and returns a CommonJS config and an ESM config. `index` also gets a declarations config."
+        files: [rollup.config.mjs, package.json]
+      - text: "Both configs mark non-relative imports as external, alias the other entry points to `zustand/...` paths from the `entries` list so they are not bundled twice, and replace `import.meta.env?.MODE`."
+        files: [rollup.config.mjs]
+      - text: "`postbuild` rewrites paths in declarations, copies `dist/src/*` into place, writes a `dist/package.json` with `private` false, and renames ESM declarations to `.d.mts`."
+        files: [package.json]
+
+guide:
+  - text: "Read the map first: it lists the four parts and how they depend on each other."
+  - story: S1
+    text: "the main path: how `create` builds a store and a hook, and what happens on an update."
+  - part: core
+    text: "the store itself, which everything else calls."
+  - part: react
+    text: "the hook and the shallow helpers built on that store."
+  - story: S4
+    text: "one middleware in full, to see how a wrapper adds behaviour."
+  - part: middleware
+    text: "the rest of the middleware."
+  - story: S6
+    text: "how middleware stack and how their types compose."
+  - part: build
+    text: "the build and test setup, last, because nothing else depends on it."

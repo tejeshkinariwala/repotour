@@ -1,0 +1,3 @@
+parts:
+  - {id: a, name: A}
+  - {id: a, name: B}
